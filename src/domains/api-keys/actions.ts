@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { getCurrentUser } from '@/domains/auth/service';
 import { isVoxaApiError } from '@/lib/services';
 import type { ApiKey } from './schemas';
 import { CreateApiKeyInputSchema } from './schemas';
@@ -17,6 +18,12 @@ type RevokeApiKeyResult = { success: true } | { success: false; error: string };
 // ─── Server Actions ───────────────────────────────────────────────────────────
 
 export async function createApiKeyAction(formData: FormData): Promise<CreateApiKeyResult> {
+  // Verificar autenticação
+  const user = await getCurrentUser().catch(() => null);
+  if (!user) {
+    return { success: false, error: 'Não autenticado. Faça login novamente.' };
+  }
+
   const parsed = CreateApiKeyInputSchema.safeParse({
     label: formData.get('label'),
   });
@@ -51,6 +58,12 @@ export async function createApiKeyAction(formData: FormData): Promise<CreateApiK
 }
 
 export async function revokeApiKeyAction(id: string): Promise<RevokeApiKeyResult> {
+  // Verificar autenticação
+  const user = await getCurrentUser().catch(() => null);
+  if (!user) {
+    return { success: false, error: 'Não autenticado. Faça login novamente.' };
+  }
+
   try {
     await revokeApiKey(id);
     revalidatePath('/dashboard/api-keys');

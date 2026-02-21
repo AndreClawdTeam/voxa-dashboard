@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CustomerProfileSection } from '@/domains/admin/customers/components/CustomerProfileSection';
 import { CustomerSubscriptionSection } from '@/domains/admin/customers/components/CustomerSubscriptionSection';
@@ -9,12 +10,21 @@ import { getCustomer } from '@/domains/admin/customers/service';
 
 export const dynamic = 'force-dynamic';
 
+// Validação do ID de URL para prevenir path traversal e input malicioso
+const CustomerIdSchema = z.string().uuid('ID de cliente inválido');
+
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
+  // Validar o ID antes de passar para a API
+  const idParsed = CustomerIdSchema.safeParse(id);
+  if (!idParsed.success) {
+    notFound();
+  }
+
   let customer: AdminCustomerDetail;
   try {
-    customer = await getCustomer(id);
+    customer = await getCustomer(idParsed.data);
   } catch {
     notFound();
   }
@@ -57,7 +67,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           <CardTitle>Gerenciar assinatura</CardTitle>
         </CardHeader>
         <CardContent>
-          <ManageSubscriptionForm customer={customer} customerId={id} />
+          <ManageSubscriptionForm customer={customer} customerId={idParsed.data} />
         </CardContent>
       </Card>
     </div>

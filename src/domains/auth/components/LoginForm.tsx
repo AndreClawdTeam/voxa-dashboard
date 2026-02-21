@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,14 +9,51 @@ import { loginAction } from '../actions';
 
 type ActionResult = { success: true } | { success: false; error: Record<string, string[]> };
 
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_SECONDS = 30;
+
+function getSecsRemaining(lockedUntil: number | null): number {
+  if (lockedUntil === null) return 0;
+  return Math.max(0, Math.ceil((lockedUntil - Date.now()) / 1000));
+}
+
 export function LoginForm() {
+  const [failCount, setFailCount] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
+
+  const secsRemaining = getSecsRemaining(lockedUntil);
+  const isLocked = secsRemaining > 0;
+
   const [state, action, isPending] = useActionState(
     async (prevState: ActionResult | null, formData: FormData) => {
+      // Verificar lockout antes de submeter
+      const remaining = getSecsRemaining(lockedUntil);
+      if (remaining > 0) {
+        toast.error(`Muitas tentativas. Aguarde ${remaining}s antes de tentar novamente.`);
+        return prevState;
+      }
+
       const result = await loginAction(prevState, formData);
+
       // ✅ Efeito após action AQUI — nunca em useEffect
       if (!result.success && result.error._form) {
         toast.error(result.error._form[0]);
+
+        // Incrementar contador de falhas e aplicar lockout se necessário
+        const newCount = failCount + 1;
+        setFailCount(newCount);
+        if (newCount >= MAX_ATTEMPTS) {
+          setLockedUntil(Date.now() + LOCKOUT_SECONDS * 1000);
+          toast.error(
+            `Conta temporariamente bloqueada após ${MAX_ATTEMPTS} tentativas. Aguarde ${LOCKOUT_SECONDS} segundos.`,
+          );
+        }
+      } else if (result.success) {
+        // Reset contador no sucesso
+        setFailCount(0);
+        setLockedUntil(null);
       }
+
       return result;
     },
     null,
@@ -40,8 +77,14 @@ export function LoginForm() {
         )}
       </div>
 
-      <Button type="submit" disabled={isPending} className="w-full">
-        {isPending ? 'Entrando...' : 'Entrar'}
+      {isLocked && (
+        <p className="text-sm text-destructive text-center">
+          Acesso temporariamente bloqueado. Aguarde {secsRemaining}s.
+        </p>
+      )}
+
+      <Button type="submit" disabled={isPending || isLocked} className="w-full">
+        {isPending ? 'Entrando...' : isLocked ? `Bloqueado (${secsRemaining}s)` : 'Entrar'}
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">

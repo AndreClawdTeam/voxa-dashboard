@@ -14,7 +14,7 @@ export default async function AdminCustomersPage({
 }) {
   const params = await searchParams;
   const page = Math.max(1, Number(params.page) || 1);
-  const search = typeof params.search === 'string' ? params.search : undefined;
+  const search = typeof params.search === 'string' ? params.search.slice(0, 100) : undefined;
 
   const { data: customers, pagination } = await listCustomers({ page, search });
 

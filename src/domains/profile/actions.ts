@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { getCurrentUser } from '@/domains/auth/service';
 import { isVoxaApiError } from '@/lib/services';
 import type { UserProfile } from './schemas';
 import { UpdateProfileSchema } from './schemas';
@@ -15,6 +16,12 @@ export async function updateProfileAction(
   _prevState: UpdateProfileState,
   formData: FormData,
 ): Promise<UpdateProfileState> {
+  // Verificar autenticação
+  const user = await getCurrentUser().catch(() => null);
+  if (!user) {
+    return { success: false, apiError: 'Não autenticado. Faça login novamente.' };
+  }
+
   const raw = {
     name: formData.get('name'),
     email: formData.get('email'),
@@ -37,7 +44,7 @@ export async function updateProfileAction(
     if (isVoxaApiError(err)) {
       return { success: false, apiError: err.message };
     }
-    const message = err instanceof Error ? err.message : 'Erro ao atualizar perfil';
-    return { success: false, apiError: message };
+    // Não vazar detalhes internos de erros inesperados para o cliente
+    return { success: false, apiError: 'Erro ao atualizar perfil. Tente novamente.' };
   }
 }

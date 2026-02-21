@@ -139,7 +139,12 @@ export async function voxaFetch<T>({
   const json = await response.json();
   const parsed = schema.safeParse(json);
   if (!parsed.success) {
-    console.error('[voxaFetch] Resposta inesperada da API:', parsed.error.format());
+    // Em desenvolvimento, loga detalhes para depuração. Em produção, evita expor estrutura interna.
+    if (env.NODE_ENV !== 'production') {
+      console.error('[voxaFetch] Resposta inesperada da API:', parsed.error.format());
+    } else {
+      console.error('[voxaFetch] Resposta inesperada da API no endpoint:', endpoint);
+    }
     throw new VoxaApiError('Resposta inesperada da API. Contate o suporte.', 'INVALID_RESPONSE');
   }
 

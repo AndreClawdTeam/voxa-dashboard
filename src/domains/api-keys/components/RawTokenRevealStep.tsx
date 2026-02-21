@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,9 +13,18 @@ interface RawTokenRevealStepProps {
 export function RawTokenRevealStep({ rawToken, onClose }: RawTokenRevealStepProps) {
   const [copied, setCopied] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [token, setToken] = useState(rawToken);
+
+  // Limpar token da memória ao desmontar o componente
+  useEffect(() => {
+    setToken(rawToken);
+    return () => {
+      setToken('');
+    };
+  }, [rawToken]);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(rawToken);
+    await navigator.clipboard.writeText(token);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -36,7 +45,7 @@ export function RawTokenRevealStep({ rawToken, onClose }: RawTokenRevealStepProp
       <div className="space-y-2">
         <Label htmlFor="raw-token">Sua API Key</Label>
         <div className="flex gap-2">
-          <Input id="raw-token" value={rawToken} readOnly className="font-mono text-sm" />
+          <Input id="raw-token" value={token} readOnly className="font-mono text-sm" />
           <Button type="button" variant="outline" onClick={handleCopy} className="shrink-0">
             {copied ? 'Copiado! ✓' : 'Copiar token'}
           </Button>

@@ -16,10 +16,11 @@ export default async function AuditLogsPage({
   const page = Math.max(1, Number(params.page) || 1);
   const filters = {
     page,
-    action: typeof params.action === 'string' ? params.action : undefined,
-    resourceType: typeof params.resourceType === 'string' ? params.resourceType : undefined,
-    startDate: typeof params.startDate === 'string' ? params.startDate : undefined,
-    endDate: typeof params.endDate === 'string' ? params.endDate : undefined,
+    action: typeof params.action === 'string' ? params.action.slice(0, 100) : undefined,
+    resourceType:
+      typeof params.resourceType === 'string' ? params.resourceType.slice(0, 100) : undefined,
+    startDate: typeof params.startDate === 'string' ? params.startDate.slice(0, 30) : undefined,
+    endDate: typeof params.endDate === 'string' ? params.endDate.slice(0, 30) : undefined,
   };
 
   const { data: logs, pagination } = await listAuditLogs(filters);

@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { getCurrentUser } from '@/domains/auth/service';
 import type { Subscription } from './schemas';
 import { UpgradeSchema } from './schemas';
 import { upgradeSubscription } from './service';
@@ -14,6 +15,12 @@ export async function upgradeSubscriptionAction(
   _prevState: UpgradeState,
   formData: FormData,
 ): Promise<UpgradeState> {
+  // Verificar autenticação
+  const user = await getCurrentUser().catch(() => null);
+  if (!user) {
+    return { success: false, error: 'Não autenticado. Faça login novamente.' };
+  }
+
   const parsed = UpgradeSchema.safeParse({ tier: formData.get('tier') });
   if (!parsed.success) {
     return { success: false, error: 'Plano inválido' };

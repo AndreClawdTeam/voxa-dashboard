@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LanguageConfidenceBar } from '@/domains/transcriptions/components/LanguageConfidenceBar';
 import { TranscriptionStatusBadge } from '@/domains/transcriptions/components/TranscriptionStatusBadge';
@@ -8,13 +10,28 @@ import { getTranscription } from '@/domains/transcriptions/service';
 
 export const dynamic = 'force-dynamic';
 
+// Validação do ID de URL para prevenir path traversal e input malicioso
+const TranscriptionIdSchema = z.string().uuid('ID de transcrição inválido');
+
 export default async function TranscriptionDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const transcription = await getTranscription(id);
+
+  // Validar o ID antes de passar para a API
+  const idParsed = TranscriptionIdSchema.safeParse(id);
+  if (!idParsed.success) {
+    notFound();
+  }
+
+  let transcription;
+  try {
+    transcription = await getTranscription(idParsed.data);
+  } catch {
+    notFound();
+  }
 
   return (
     <div className="space-y-6">
