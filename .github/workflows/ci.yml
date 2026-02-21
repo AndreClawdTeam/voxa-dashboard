@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main, feat/voxa-dashboard-complete]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    name: Quality checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (Biome)
+        run: npx biome check .
+
+      - name: Format check (Biome)
+        run: npx biome format --check .
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Run tests
+        run: npm run test:run
+
+      - name: Build
+        run: npm run build
+
+      - name: Check for direct fetch() outside lib/services
+        run: |
+          if grep -rn "fetch(" src/ --include="*.ts" --include="*.tsx" \
+            | grep -v "src/lib/services/" \
+            | grep -v "\.test\." \
+            | grep -v "\.spec\." \
+            | grep -q .; then
+            echo "❌ Direct fetch() found outside src/lib/services/"
+            grep -rn "fetch(" src/ --include="*.ts" --include="*.tsx" \
+              | grep -v "src/lib/services/" \
+              | grep -v "\.test\." \
+              | grep -v "\.spec\."
+            exit 1
+          fi
+          echo "✅ No direct fetch() usage found outside src/lib/services/"
