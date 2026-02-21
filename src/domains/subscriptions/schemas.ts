@@ -18,3 +18,20 @@ export const SubscriptionSchema = z.object({
 export type Subscription = z.infer<typeof SubscriptionSchema>['data'];
 export type Tier = z.infer<typeof TierSchema>;
 export type SubscriptionStatus = z.infer<typeof SubscriptionStatusSchema>;
+
+export const UpgradeSchema = z.object({
+  tier: z.enum(['basic', 'pro']),
+});
+export type UpgradeTier = z.infer<typeof UpgradeSchema>['tier'];
+
+export const UpgradeResponseSchema = z.object({
+  data: z.object({
+    id: z.string().uuid(),
+    userId: z.string().uuid(),
+    tier: TierSchema,
+    status: SubscriptionStatusSchema,
+    trialEndsAt: z.string().nullable(),
+    currentPeriodStart: z.string(),
+    currentPeriodEnd: z.string(),
+  }),
+});

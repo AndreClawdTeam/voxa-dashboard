@@ -29,3 +29,42 @@ export const TIER_RATE_LIMITS: Record<string, number> = {
   basic: 60,
   pro: 300,
 };
+
+export function getSubscriptionStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    trial: 'Trial',
+    active: 'Ativa',
+    suspended: 'Suspensa',
+    cancelled: 'Cancelada',
+  };
+  return labels[status] ?? status;
+}
+
+export function formatPeriod(start: string, end: string): string {
+  const fmt = (d: string) => new Date(d).toLocaleDateString('pt-BR');
+  return `${fmt(start)} → ${fmt(end)}`;
+}
+
+export const PLAN_FEATURES: Record<
+  string,
+  { label: string; rateLimit: string; features: string[]; price: string }
+> = {
+  trial: {
+    label: 'Trial',
+    rateLimit: '20 req/min',
+    price: 'Grátis',
+    features: ['20 requisições/minuto', '7 dias de acesso', 'Todas as funcionalidades'],
+  },
+  basic: {
+    label: 'Basic',
+    rateLimit: '60 req/min',
+    price: 'R$ 49/mês',
+    features: ['60 requisições/minuto', 'Suporte por e-mail', 'Histórico ilimitado'],
+  },
+  pro: {
+    label: 'Pro',
+    rateLimit: '300 req/min',
+    price: 'R$ 149/mês',
+    features: ['300 requisições/minuto', 'Suporte prioritário', 'Histórico ilimitado', 'SLA 99.9%'],
+  },
+};

@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { formatAudioDuration, getTrialDaysRemaining, isTrialExpiringSoon } from './helpers';
+import {
+  formatAudioDuration,
+  formatPeriod,
+  getSubscriptionStatusLabel,
+  getTrialDaysRemaining,
+  isTrialExpiringSoon,
+} from './helpers';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -95,5 +101,44 @@ describe('formatAudioDuration', () => {
     expect(formatAudioDuration(3660)).toBe('1h 1min');
     expect(formatAudioDuration(5400)).toBe('1h 30min');
     expect(formatAudioDuration(7320)).toBe('2h 2min');
+  });
+});
+
+describe('getSubscriptionStatusLabel', () => {
+  it("deve retornar 'Ativa' para status 'active'", () => {
+    expect(getSubscriptionStatusLabel('active')).toBe('Ativa');
+  });
+
+  it("deve retornar 'Trial' para status 'trial'", () => {
+    expect(getSubscriptionStatusLabel('trial')).toBe('Trial');
+  });
+
+  it("deve retornar 'Suspensa' para status 'suspended'", () => {
+    expect(getSubscriptionStatusLabel('suspended')).toBe('Suspensa');
+  });
+
+  it("deve retornar 'Cancelada' para status 'cancelled'", () => {
+    expect(getSubscriptionStatusLabel('cancelled')).toBe('Cancelada');
+  });
+
+  it('deve retornar o status original para valores desconhecidos', () => {
+    expect(getSubscriptionStatusLabel('unknown')).toBe('unknown');
+  });
+});
+
+describe('formatPeriod', () => {
+  it("deve formatar '2026-01-01' → '2026-01-31' como '01/01/2026 → 31/01/2026'", () => {
+    // Use fixed timezone to avoid locale flakiness
+    const result = formatPeriod('2026-01-01', '2026-01-31');
+    expect(result).toMatch(/01\/01\/2026 → 31\/01\/2026/);
+  });
+});
+
+describe('getTrialDaysRemaining — data no passado retorna 0', () => {
+  it('deve retornar 0 quando trial já expirou', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-01T00:00:00Z'));
+    expect(getTrialDaysRemaining('2026-02-01T00:00:00Z')).toBe(0);
+    vi.useRealTimers();
   });
 });
