@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { AdminCustomerSchema, CustomerListParamsSchema } from './schemas';
+import {
+  AdminCustomerDetailSchema,
+  AdminCustomerSchema,
+  CustomerListParamsSchema,
+  UpdateSubscriptionSchema,
+} from './schemas';
 
 const validCustomer = {
   id: '123e4567-e89b-12d3-a456-426614174000',
@@ -88,5 +93,74 @@ describe('AdminCustomerSchema', () => {
   it('falha para email inválido', () => {
     const result = AdminCustomerSchema.safeParse({ ...validCustomer, email: 'not-an-email' });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('UpdateSubscriptionSchema', () => {
+  it('aceita { tier: "pro" } sem status', () => {
+    const result = UpdateSubscriptionSchema.safeParse({ tier: 'pro' });
+    expect(result.success).toBe(true);
+  });
+
+  it('aceita { status: "suspended" } sem tier', () => {
+    const result = UpdateSubscriptionSchema.safeParse({ status: 'suspended' });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejeita objeto vazio (nenhum campo)', () => {
+    const result = UpdateSubscriptionSchema.safeParse({});
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toContain('Ao menos um campo');
+    }
+  });
+
+  it('rejeita tier inválido "enterprise"', () => {
+    const result = UpdateSubscriptionSchema.safeParse({ tier: 'enterprise' });
+    expect(result.success).toBe(false);
+  });
+
+  it('aceita ambos tier e status juntos', () => {
+    const result = UpdateSubscriptionSchema.safeParse({ tier: 'basic', status: 'active' });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe('AdminCustomerDetailSchema', () => {
+  const baseCustomer = {
+    id: 'abc-123',
+    email: 'user@example.com',
+    name: 'Maria Silva',
+    role: 'customer' as const,
+    isActive: true,
+    createdAt: '2024-01-15T10:00:00Z',
+  };
+
+  it('valida com subscription null', () => {
+    const result = AdminCustomerDetailSchema.safeParse({ ...baseCustomer, subscription: null });
+    expect(result.success).toBe(true);
+  });
+
+  it('valida com subscription undefined (campo ausente)', () => {
+    const result = AdminCustomerDetailSchema.safeParse(baseCustomer);
+    expect(result.success).toBe(true);
+  });
+
+  it('valida com subscription completa', () => {
+    const result = AdminCustomerDetailSchema.safeParse({
+      ...baseCustomer,
+      subscription: {
+        id: 'sub-001',
+        tier: 'pro',
+        status: 'active',
+        trialEndsAt: null,
+        currentPeriodStart: '2024-01-01T00:00:00Z',
+        currentPeriodEnd: '2024-02-01T00:00:00Z',
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.subscription?.tier).toBe('pro');
+    }
   });
 });

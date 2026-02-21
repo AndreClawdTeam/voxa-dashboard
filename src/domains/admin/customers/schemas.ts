@@ -24,3 +24,31 @@ export const CustomerListParamsSchema = z.object({
 export type AdminCustomer = z.infer<typeof AdminCustomerSchema>;
 export type CustomerListParams = z.infer<typeof CustomerListParamsSchema>;
 export type CustomerListResponse = z.infer<typeof CustomerListResponseSchema>;
+
+// ─── Customer Detail ──────────────────────────────────────────────────────────
+
+export const AdminSubscriptionSchema = z.object({
+  id: z.string(),
+  tier: z.enum(['trial', 'basic', 'pro']),
+  status: z.enum(['trial', 'active', 'suspended', 'cancelled']),
+  trialEndsAt: z.string().nullable(),
+  currentPeriodStart: z.string().nullable(),
+  currentPeriodEnd: z.string().nullable(),
+});
+
+export const AdminCustomerDetailSchema = AdminCustomerSchema.extend({
+  subscription: AdminSubscriptionSchema.nullable().optional(),
+});
+
+export const UpdateSubscriptionSchema = z
+  .object({
+    tier: z.enum(['trial', 'basic', 'pro']).optional(),
+    status: z.enum(['active', 'trial', 'suspended', 'cancelled']).optional(),
+  })
+  .refine((data) => data.tier !== undefined || data.status !== undefined, {
+    message: 'Ao menos um campo (tier ou status) deve ser fornecido',
+  });
+
+export type AdminCustomerDetail = z.infer<typeof AdminCustomerDetailSchema>;
+export type UpdateSubscriptionInput = z.infer<typeof UpdateSubscriptionSchema>;
+export type AdminSubscription = z.infer<typeof AdminSubscriptionSchema>;
