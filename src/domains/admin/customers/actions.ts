@@ -2,11 +2,13 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import type { ActionResult } from '@/lib/actions';
 import { requireAdmin } from '@/lib/auth/require-auth';
 import { UpdateSubscriptionSchema } from './schemas';
 import { updateCustomerSubscription } from './service';
 
-export type UpdateSubscriptionState = { success: true } | { success: false; error: string } | null;
+/** UpdateSubscriptionState: ActionResult<string> | null (null = initial state) */
+export type UpdateSubscriptionState = ActionResult<string> | null;
 
 const CustomerIdSchema = z.string().uuid('ID de cliente inválido');
 

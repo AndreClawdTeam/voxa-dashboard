@@ -1,5 +1,5 @@
 import { formatDate } from '@/lib/format-date';
-import { STATUS_LABELS, TIER_LABELS } from '../enums';
+import { STATUS_LABELS, TIER_LABELS } from '../constants';
 import type { AdminCustomerDetail } from '../schemas';
 
 interface Props {

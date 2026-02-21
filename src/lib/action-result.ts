@@ -16,9 +16,7 @@ export type SimpleActionResult = ActionResult<string>;
  * ActionResult com dados no sucesso.
  * Manter local para casos com `{ success: true; data: T }`.
  */
-export type DataActionResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: string };
+export type DataActionResult<T> = { success: true; data: T } | { success: false; error: string };
 
 /** Helper para extrair field errors de um Zod flatten */
 export function fieldErrors(

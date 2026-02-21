@@ -22,14 +22,7 @@ import {
 } from '@/components/ui/select';
 import type { UpdateSubscriptionState } from '../actions';
 import { updateSubscriptionAction } from '../actions';
-import {
-  STATUS_LABELS,
-  SUBSCRIPTION_STATUSES,
-  SUBSCRIPTION_TIERS,
-  type SubscriptionStatus,
-  type SubscriptionTier,
-  TIER_LABELS,
-} from '../enums';
+import { STATUS_LABELS, SUBSCRIPTION_STATUS, SUBSCRIPTION_TIER, TIER_LABELS } from '../constants';
 import type { AdminCustomerDetail } from '../schemas';
 
 interface Props {
@@ -40,14 +33,8 @@ interface Props {
 export function ManageSubscriptionForm({ customer, customerId }: Props) {
   const currentSub = customer.subscription;
   const formRef = useRef<HTMLFormElement>(null);
-  const tierRef = useRef<HTMLInputElement>(null);
-  const statusRef = useRef<HTMLInputElement>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
-  const [confirmValues, setConfirmValues] = useState<{
-    tier: SubscriptionTier;
-    status: SubscriptionStatus;
-  } | null>(null);
 
   const boundAction = updateSubscriptionAction.bind(null, customerId);
 
@@ -65,55 +52,9 @@ export function ManageSubscriptionForm({ customer, customerId }: Props) {
     null,
   );
 
-  const handleTierChange = (value: string) => {
-    if (tierRef.current) tierRef.current.value = value;
-    const newTier = value as SubscriptionTier;
-    const curStatus = (statusRef.current?.value ??
-      currentSub?.status ??
-      'trial') as SubscriptionStatus;
-    setHasChanges(
-      newTier !== (currentSub?.tier ?? 'trial') || curStatus !== (currentSub?.status ?? 'trial'),
-    );
-  };
-
-  const handleStatusChange = (value: string) => {
-    if (statusRef.current) statusRef.current.value = value;
-    const curTier = (tierRef.current?.value ?? currentSub?.tier ?? 'trial') as SubscriptionTier;
-    const newStatus = value as SubscriptionStatus;
-    setHasChanges(
-      curTier !== (currentSub?.tier ?? 'trial') || newStatus !== (currentSub?.status ?? 'trial'),
-    );
-  };
-
-  const handleSaveClick = () => {
-    const tier = (tierRef.current?.value ?? currentSub?.tier ?? 'trial') as SubscriptionTier;
-    const status = (statusRef.current?.value ??
-      currentSub?.status ??
-      'trial') as SubscriptionStatus;
-    setConfirmValues({ tier, status });
-    setShowConfirm(true);
-  };
-
-  const handleConfirm = () => {
-    setShowConfirm(false);
-    if (!confirmValues) return;
-    const fd = new FormData();
-    fd.set('tier', confirmValues.tier);
-    fd.set('status', confirmValues.status);
-    formAction(fd);
-  };
-
   return (
     <>
-      <form ref={formRef} className="space-y-4">
-        <input ref={tierRef} type="hidden" name="tier" defaultValue={currentSub?.tier ?? 'trial'} />
-        <input
-          ref={statusRef}
-          type="hidden"
-          name="status"
-          defaultValue={currentSub?.status ?? 'trial'}
-        />
-
+      <form ref={formRef} action={formAction} className="space-y-4">
         {state && !state.success && (
           <div className="bg-red-50 border border-red-200 rounded p-3 text-red-700 text-sm">
             {state.error}
@@ -123,12 +64,16 @@ export function ManageSubscriptionForm({ customer, customerId }: Props) {
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">Tier</p>
-            <Select defaultValue={currentSub?.tier ?? 'trial'} onValueChange={handleTierChange}>
+            <Select
+              name="tier"
+              defaultValue={currentSub?.tier ?? SUBSCRIPTION_TIER.trial}
+              onValueChange={() => setHasChanges(true)}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {SUBSCRIPTION_TIERS.map((tier) => (
+                {Object.values(SUBSCRIPTION_TIER).map((tier) => (
                   <SelectItem key={tier} value={tier}>
                     {TIER_LABELS[tier]}
                   </SelectItem>
@@ -138,12 +83,16 @@ export function ManageSubscriptionForm({ customer, customerId }: Props) {
           </div>
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">Status</p>
-            <Select defaultValue={currentSub?.status ?? 'trial'} onValueChange={handleStatusChange}>
+            <Select
+              name="status"
+              defaultValue={currentSub?.status ?? SUBSCRIPTION_STATUS.trial}
+              onValueChange={() => setHasChanges(true)}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {SUBSCRIPTION_STATUSES.map((status) => (
+                {Object.values(SUBSCRIPTION_STATUS).map((status) => (
                   <SelectItem key={status} value={status}>
                     {STATUS_LABELS[status]}
                   </SelectItem>
@@ -153,7 +102,11 @@ export function ManageSubscriptionForm({ customer, customerId }: Props) {
           </div>
         </div>
 
-        <Button type="button" onClick={handleSaveClick} disabled={isPending || !hasChanges}>
+        <Button
+          type="button"
+          onClick={() => setShowConfirm(true)}
+          disabled={isPending || !hasChanges}
+        >
           {isPending ? 'Salvando...' : 'Salvar alterações'}
         </Button>
       </form>
@@ -162,27 +115,21 @@ export function ManageSubscriptionForm({ customer, customerId }: Props) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar alteração de assinatura</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div>
-                Você está alterando a assinatura de <strong>{customer.name}</strong>:
-                <br />
-                Tier:{' '}
-                <strong>
-                  {currentSub?.tier ? TIER_LABELS[currentSub.tier] : '—'} →{' '}
-                  {confirmValues ? TIER_LABELS[confirmValues.tier] : '—'}
-                </strong>
-                <br />
-                Status:{' '}
-                <strong>
-                  {currentSub?.status ? STATUS_LABELS[currentSub.status] : '—'} →{' '}
-                  {confirmValues ? STATUS_LABELS[confirmValues.status] : '—'}
-                </strong>
-              </div>
+            <AlertDialogDescription>
+              Você está alterando a assinatura de <strong>{customer.name}</strong>. Essa ação
+              atualizará o tier e/ou status da assinatura.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirm}>Confirmar</AlertDialogAction>
+            <AlertDialogAction
+              onClick={() => {
+                setShowConfirm(false);
+                formRef.current?.requestSubmit();
+              }}
+            >
+              Confirmar
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
