@@ -1,27 +1,31 @@
-import type { SearchParams } from 'next/dist/server/request/search-params';
 import { AuditLogFilters } from '@/domains/admin/audit-logs/components/AuditLogFilters';
 import { AuditLogTable } from '@/domains/admin/audit-logs/components/AuditLogTable';
+import { AuditLogFiltersSchema } from '@/domains/admin/audit-logs/schemas';
 import { listAuditLogs } from '@/domains/admin/audit-logs/service';
 import { AdminPagination } from '@/domains/admin/customers/components/AdminPagination';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Audit Logs — Admin Voxa' };
 
+type PageSearchParams = Record<string, string | string[] | undefined>;
+
 export default async function AuditLogsPage({
   searchParams,
 }: {
-  searchParams: Promise<SearchParams>;
+  searchParams: Promise<PageSearchParams>;
 }) {
   const params = await searchParams;
-  const page = Math.max(1, Number(params.page) || 1);
-  const filters = {
-    page,
-    action: typeof params.action === 'string' ? params.action.slice(0, 100) : undefined,
-    resourceType:
-      typeof params.resourceType === 'string' ? params.resourceType.slice(0, 100) : undefined,
-    startDate: typeof params.startDate === 'string' ? params.startDate.slice(0, 30) : undefined,
-    endDate: typeof params.endDate === 'string' ? params.endDate.slice(0, 30) : undefined,
-  };
+  const parsed = AuditLogFiltersSchema.safeParse(params);
+  const filters = parsed.success
+    ? parsed.data
+    : {
+        page: 1,
+        limit: 20,
+        action: undefined,
+        resourceType: undefined,
+        startDate: undefined,
+        endDate: undefined,
+      };
 
   const { data: logs, pagination } = await listAuditLogs(filters);
 
@@ -45,7 +49,7 @@ export default async function AuditLogsPage({
 
       <AuditLogTable logs={logs} />
 
-      <AdminPagination pagination={pagination} currentPage={page} />
+      <AdminPagination pagination={pagination} currentPage={filters.page} />
     </div>
   );
 }

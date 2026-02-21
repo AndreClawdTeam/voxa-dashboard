@@ -52,3 +52,11 @@ export const TranscriptionListResponseSchema = z.object({
 });
 
 export type TranscriptionListResponse = z.infer<typeof TranscriptionListResponseSchema>;
+
+// ─── Query params schema ──────────────────────────────────────────────────────
+
+export const TranscriptionListParamsSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+});
+
+export type TranscriptionListParams = z.infer<typeof TranscriptionListParamsSchema>;

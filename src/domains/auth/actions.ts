@@ -2,11 +2,12 @@
 
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import type { ActionResult } from '@/lib/actions';
+
+type FieldActionResult = ActionResult;
 import { isVoxaApiError } from '@/lib/services';
 import { LoginSchema, RegisterSchema } from './schemas';
 import { loginUser, logoutUser, registerUser } from './service';
-
-type ActionResult = { success: true } | { success: false; error: Record<string, string[]> };
 
 async function setAuthCookies(accessToken: string, role: string) {
   const cookieStore = await cookies();
@@ -30,9 +31,9 @@ async function setAuthCookies(accessToken: string, role: string) {
 }
 
 export async function loginAction(
-  _prevState: ActionResult | null,
+  _prevState: FieldActionResult | null,
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<FieldActionResult> {
   const parsed = LoginSchema.safeParse({
     email: formData.get('email'),
     password: formData.get('password'),
@@ -59,9 +60,9 @@ export async function loginAction(
 }
 
 export async function registerAction(
-  _prevState: ActionResult | null,
+  _prevState: FieldActionResult | null,
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<FieldActionResult> {
   const parsed = RegisterSchema.safeParse({
     name: formData.get('name'),
     email: formData.get('email'),

@@ -1,19 +1,22 @@
-import type { SearchParams } from 'next/dist/server/request/search-params';
 import { TranscriptionPagination } from '@/domains/transcriptions/components/TranscriptionPagination';
 import { TranscriptionTable } from '@/domains/transcriptions/components/TranscriptionTable';
+import { TranscriptionListParamsSchema } from '@/domains/transcriptions/schemas';
 import { listTranscriptions } from '@/domains/transcriptions/service';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata = { title: 'Transcrições — Voxa Dashboard' };
 
+type PageSearchParams = Record<string, string | string[] | undefined>;
+
 export default async function TranscriptionsPage({
   searchParams,
 }: {
-  searchParams: Promise<SearchParams>;
+  searchParams: Promise<PageSearchParams>;
 }) {
   const params = await searchParams;
-  const page = Math.max(1, Number(params.page) || 1);
+  const parsed = TranscriptionListParamsSchema.safeParse(params);
+  const { page } = parsed.success ? parsed.data : { page: 1 };
 
   const { data: transcriptions, pagination } = await listTranscriptions({ page });
 

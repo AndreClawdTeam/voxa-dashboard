@@ -1,16 +1,10 @@
+import { formatDate } from '@/lib/format-date';
+import { STATUS_LABELS, TIER_LABELS } from '../enums';
 import type { AdminCustomerDetail } from '../schemas';
 
 interface Props {
   customer: AdminCustomerDetail;
 }
-
-const TIER_LABELS: Record<string, string> = { trial: 'Trial', basic: 'Basic', pro: 'Pro' };
-const STATUS_LABELS: Record<string, string> = {
-  trial: 'Trial',
-  active: 'Ativa',
-  suspended: 'Suspensa',
-  cancelled: 'Cancelada',
-};
 
 export function CustomerSubscriptionSection({ customer }: Props) {
   const sub = customer.subscription;
@@ -32,15 +26,14 @@ export function CustomerSubscriptionSection({ customer }: Props) {
       {sub.trialEndsAt && (
         <div className="flex justify-between">
           <span className="text-muted-foreground">Trial até</span>
-          <span>{new Date(sub.trialEndsAt).toLocaleDateString('pt-BR')}</span>
+          <span>{formatDate(sub.trialEndsAt)}</span>
         </div>
       )}
       {sub.currentPeriodStart && sub.currentPeriodEnd && (
         <div className="flex justify-between">
           <span className="text-muted-foreground">Período</span>
           <span>
-            {new Date(sub.currentPeriodStart).toLocaleDateString('pt-BR')} →{' '}
-            {new Date(sub.currentPeriodEnd).toLocaleDateString('pt-BR')}
+            {formatDate(sub.currentPeriodStart)} → {formatDate(sub.currentPeriodEnd)}
           </span>
         </div>
       )}

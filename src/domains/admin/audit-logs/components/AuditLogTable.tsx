@@ -6,6 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { formatDateTime } from '@/lib/format-date';
 import type { AuditLog } from '../schemas';
 import { ActionBadge } from './ActionBadge';
 import { AuditMetadataModal } from './AuditMetadataModal';
@@ -35,7 +36,7 @@ export function AuditLogTable({ logs }: Props) {
         {logs.map((log, i) => (
           <TableRow key={log.id ?? `${log.actorId}-${log.createdAt}-${i}`}>
             <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-              {new Date(log.createdAt).toLocaleString('pt-BR')}
+              {formatDateTime(log.createdAt)}
             </TableCell>
             <TableCell>
               <div className="text-xs">

@@ -7,21 +7,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { formatDateTime } from '@/lib/format-date';
 import type { ApiKey } from '../schemas';
 import { RevokeApiKeyButton } from './RevokeApiKeyButton';
 
 interface ApiKeyTableProps {
   keys: ApiKey[];
-}
-
-function formatDate(dateStr: string): string {
-  return new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(dateStr));
 }
 
 export function ApiKeyTable({ keys }: ApiKeyTableProps) {
@@ -63,9 +54,11 @@ export function ApiKeyTable({ keys }: ApiKeyTableProps) {
                 )}
               </TableCell>
               <TableCell className="text-muted-foreground">
-                {key.lastUsedAt ? formatDate(key.lastUsedAt) : 'Nunca'}
+                {key.lastUsedAt ? formatDateTime(key.lastUsedAt) : 'Nunca'}
               </TableCell>
-              <TableCell className="text-muted-foreground">{formatDate(key.createdAt)}</TableCell>
+              <TableCell className="text-muted-foreground">
+                {formatDateTime(key.createdAt)}
+              </TableCell>
               <TableCell className="text-right">
                 <RevokeApiKeyButton id={key.id} label={key.label} isRevoked={key.isRevoked} />
               </TableCell>

@@ -7,6 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { formatDateTime } from '@/lib/format-date';
 import { formatDuration } from '../helpers';
 import type { TranscriptionListItem } from '../schemas';
 import { TranscriptionStatusBadge } from './TranscriptionStatusBadge';
@@ -57,7 +58,7 @@ export function TranscriptionTable({ transcriptions }: TranscriptionTableProps) 
                 {t.audioDurationSeconds != null ? formatDuration(t.audioDurationSeconds) : '—'}
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">
-                {new Date(t.createdAt).toLocaleString('pt-BR')}
+                {formatDateTime(t.createdAt)}
               </TableCell>
             </TableRow>
           ))}

@@ -7,6 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { formatDate } from '@/lib/format-date';
 import type { AdminCustomer } from '../schemas';
 import { CustomerStatusBadge } from './CustomerStatusBadge';
 
@@ -42,7 +43,7 @@ export function CustomerTable({ customers }: Props) {
             <TableCell>
               <CustomerStatusBadge isActive={c.isActive} />
             </TableCell>
-            <TableCell>{new Date(c.createdAt).toLocaleDateString('pt-BR')}</TableCell>
+            <TableCell>{formatDate(c.createdAt)}</TableCell>
             <TableCell className="text-right">
               <Link
                 href={`/admin/customers/${c.id}`}

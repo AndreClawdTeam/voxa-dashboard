@@ -5,9 +5,8 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import type { FieldActionResult } from '@/lib/action-result';
 import { loginAction } from '../actions';
-
-type ActionResult = { success: true } | { success: false; error: Record<string, string[]> };
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_SECONDS = 30;
@@ -25,7 +24,7 @@ export function LoginForm() {
   const isLocked = secsRemaining > 0;
 
   const [state, action, isPending] = useActionState(
-    async (prevState: ActionResult | null, formData: FormData) => {
+    async (prevState: FieldActionResult | null, formData: FormData) => {
       // Verificar lockout antes de submeter
       const remaining = getSecsRemaining(lockedUntil);
       if (remaining > 0) {

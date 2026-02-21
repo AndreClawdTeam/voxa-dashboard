@@ -5,13 +5,12 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import type { FieldActionResult } from '@/lib/action-result';
 import { registerAction } from '../actions';
-
-type ActionResult = { success: true } | { success: false; error: Record<string, string[]> };
 
 export function RegisterForm() {
   const [state, action, isPending] = useActionState(
-    async (prevState: ActionResult | null, formData: FormData) => {
+    async (prevState: FieldActionResult | null, formData: FormData) => {
       const result = await registerAction(prevState, formData);
       // ✅ Efeito após action AQUI — nunca em useEffect
       if (!result.success && result.error._form) {

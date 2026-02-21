@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { PaginationSchema } from '@/lib/zod';
+import { SUBSCRIPTION_STATUSES, SUBSCRIPTION_TIERS } from './enums';
 
 export const AdminCustomerSchema = z.object({
   id: z.string(),
@@ -29,8 +30,8 @@ export type CustomerListResponse = z.infer<typeof CustomerListResponseSchema>;
 
 export const AdminSubscriptionSchema = z.object({
   id: z.string(),
-  tier: z.enum(['trial', 'basic', 'pro']),
-  status: z.enum(['trial', 'active', 'suspended', 'cancelled']),
+  tier: z.enum(SUBSCRIPTION_TIERS),
+  status: z.enum(SUBSCRIPTION_STATUSES),
   trialEndsAt: z.string().nullable(),
   currentPeriodStart: z.string().nullable(),
   currentPeriodEnd: z.string().nullable(),
@@ -42,8 +43,8 @@ export const AdminCustomerDetailSchema = AdminCustomerSchema.extend({
 
 export const UpdateSubscriptionSchema = z
   .object({
-    tier: z.enum(['trial', 'basic', 'pro']).optional(),
-    status: z.enum(['active', 'trial', 'suspended', 'cancelled']).optional(),
+    tier: z.enum(SUBSCRIPTION_TIERS).optional(),
+    status: z.enum(SUBSCRIPTION_STATUSES).optional(),
   })
   .refine((data) => data.tier !== undefined || data.status !== undefined, {
     message: 'Ao menos um campo (tier ou status) deve ser fornecido',

@@ -1,3 +1,5 @@
+import { formatDate } from '@/lib/utils';
+
 export function getTrialDaysRemaining(trialEndsAt: string | null): number {
   if (!trialEndsAt) return 0;
   const diff = new Date(trialEndsAt).getTime() - Date.now();
@@ -41,8 +43,7 @@ export function getSubscriptionStatusLabel(status: string): string {
 }
 
 export function formatPeriod(start: string, end: string): string {
-  const fmt = (d: string) => new Date(d).toLocaleDateString('pt-BR');
-  return `${fmt(start)} → ${fmt(end)}`;
+  return `${formatDate(start)} → ${formatDate(end)}`;
 }
 
 export const PLAN_FEATURES: Record<

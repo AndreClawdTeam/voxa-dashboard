@@ -8,6 +8,7 @@ import { TranscriptionTextViewer } from '@/domains/transcriptions/components/Tra
 import { formatDuration, formatFileSize } from '@/domains/transcriptions/helpers';
 import type { Transcription } from '@/domains/transcriptions/schemas';
 import { getTranscription } from '@/domains/transcriptions/service';
+import { formatDateTime } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -105,12 +106,12 @@ export default async function TranscriptionDetailPage({
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Criada em</span>
-              <span>{new Date(transcription.createdAt).toLocaleString('pt-BR')}</span>
+              <span>{formatDateTime(transcription.createdAt)}</span>
             </div>
             {transcription.completedAt && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Concluída em</span>
-                <span>{new Date(transcription.completedAt).toLocaleString('pt-BR')}</span>
+                <span>{formatDateTime(transcription.completedAt)}</span>
               </div>
             )}
             <div>

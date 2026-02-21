@@ -1,3 +1,5 @@
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import type { AdminCustomerDetail } from '../schemas';
 import { CustomerStatusBadge } from './CustomerStatusBadge';
 
@@ -33,11 +35,7 @@ export function CustomerProfileSection({ customer }: Props) {
       <div className="flex justify-between">
         <span className="text-muted-foreground">Membro desde</span>
         <span>
-          {new Date(customer.createdAt).toLocaleDateString('pt-BR', {
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric',
-          })}
+          {format(new Date(customer.createdAt), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
         </span>
       </div>
     </div>

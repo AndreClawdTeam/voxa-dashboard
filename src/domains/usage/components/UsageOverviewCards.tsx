@@ -2,6 +2,7 @@ import { Clock, Mic, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatAudioDuration, TIER_RATE_LIMITS } from '@/domains/subscriptions/helpers';
 import type { Subscription } from '@/domains/subscriptions/schemas';
+import { formatDate } from '@/lib/format-date';
 import type { Usage } from '../schemas';
 
 interface Props {
@@ -16,7 +17,7 @@ export function UsageOverviewCards({ usage, subscription }: Props) {
     {
       title: 'Transcrições este mês',
       value: usage.transcriptionsCount.toString(),
-      subtitle: `Período: ${new Date(usage.period.start).toLocaleDateString('pt-BR')}`,
+      subtitle: `Período: ${formatDate(usage.period.start)}`,
       icon: Mic,
     },
     {

@@ -1,3 +1,5 @@
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import type { UserProfile } from '../schemas';
 
 interface Props {
@@ -29,11 +31,7 @@ export function ProfileHeader({ profile }: Props) {
           </span>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          Membro desde{' '}
-          {new Date(profile.createdAt).toLocaleDateString('pt-BR', {
-            month: 'long',
-            year: 'numeric',
-          })}
+          Membro desde {format(new Date(profile.createdAt), "MMMM 'de' yyyy", { locale: ptBR })}
         </p>
       </div>
     </div>

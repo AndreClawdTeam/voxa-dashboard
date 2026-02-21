@@ -1,7 +1,7 @@
 'use client';
 import { Search, X } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -13,37 +13,49 @@ export function CustomerSearchBar({ initialSearch = '' }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [value, setValue] = useState(initialSearch);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (value.trim()) {
-        params.set('search', value.trim());
-      } else {
-        params.delete('search');
-      }
-      params.set('page', '1');
-      router.replace(`${pathname}?${params.toString()}`);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [value, pathname, router, searchParams]);
+  const handleSearch = useCallback(
+    (rawValue: string) => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (rawValue.trim()) {
+          params.set('search', rawValue.trim());
+        } else {
+          params.delete('search');
+        }
+        params.set('page', '1');
+        router.replace(`${pathname}?${params.toString()}`);
+      }, 300);
+    },
+    [pathname, router, searchParams],
+  );
+
+  const handleClear = useCallback(() => {
+    if (inputRef.current) {
+      inputRef.current.value = '';
+    }
+    handleSearch('');
+  }, [handleSearch]);
 
   return (
     <div className="relative flex items-center max-w-sm">
       <Search size={16} className="absolute left-3 text-muted-foreground pointer-events-none" />
       <Input
+        ref={inputRef}
         placeholder="Buscar por nome ou e-mail..."
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
+        defaultValue={initialSearch}
+        onChange={(e) => handleSearch(e.target.value)}
         className="pl-9 pr-8"
       />
-      {value && (
+      {initialSearch && (
         <Button
           variant="ghost"
           size="sm"
           className="absolute right-1 h-6 w-6 p-0"
-          onClick={() => setValue('')}
+          onClick={handleClear}
         >
           <X size={12} />
         </Button>
