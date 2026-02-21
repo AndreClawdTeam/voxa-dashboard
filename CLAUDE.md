@@ -362,6 +362,7 @@ voxa-dashboard/
 │   │   │   ├── UserMenu.tsx              # 'use client' — dropdown com logout
 │   │   │   └── MobileNav.tsx             # 'use client' — nav mobile
 │   │   └── shared/
+│   │       ├── ActionButton.tsx          # 'use client' — form genérico p/ Server Actions (seção 5.2.2)
 │   │       ├── ErrorBoundary.tsx         # 'use client' — captura erros em Client trees
 │   │       ├── LoadingSpinner.tsx        # Skeleton/spinner compartilhado
 │   │       ├── StatusBadge.tsx           # Badge com cores por status
@@ -515,10 +516,23 @@ export async function createApiKeyAction(
 // No Client Component — usar useActionState (React 19)
 'use client';
 import { useActionState } from 'react';
+import { toast } from 'sonner';
 import { createApiKeyAction } from '../actions';
 
 export function CreateApiKeyForm() {
-  const [state, action, isPending] = useActionState(createApiKeyAction, null);
+  const [state, action, isPending] = useActionState(
+    async (prevState: CreateApiKeyResult | null, formData: FormData) => {
+      const result = await createApiKeyAction(prevState, formData);
+      // ✅ Efeitos colaterais (toast, redirect) aqui — NÃO em useEffect
+      if (result.success) {
+        toast.success('API key criada com sucesso!');
+      } else if (result.error?._form) {
+        toast.error(result.error._form[0]);
+      }
+      return result;
+    },
+    null,
+  );
 
   return (
     <form action={action}>
@@ -533,6 +547,135 @@ export function CreateApiKeyForm() {
   );
 }
 ```
+
+### 5.2.1 Efeitos pós-action — toast, redirect (sem `useEffect`)
+
+> ❌ **Proibido:** `useEffect` para reagir ao resultado de uma Server Action.
+> ✅ **Obrigatório:** Envolver a Server Action em uma função cliente dentro do `useActionState`.
+
+O `useActionState` aceita qualquer função `async` — não apenas Server Actions diretamente. Use isso para **colocar os efeitos colaterais (toast, redirect, analytics) dentro do wrapper**, mantendo a Server Action pura.
+
+```tsx
+// ❌ ERRADO — nunca faça isso
+const [state, action] = useActionState(revokeApiKeyAction, null);
+
+useEffect(() => {
+  if (state?.success) {
+    toast.success('Key revogada!'); // useEffect para reagir a state → proibido
+  }
+}, [state]);
+
+// ✅ CORRETO — efeito dentro do wrapper da action
+const [state, action, isPending] = useActionState(
+  async (prevState: RevokeApiKeyResult | null, formData: FormData) => {
+    const result = await revokeApiKeyAction(prevState, formData); // Server Action
+    // Efeitos acontecem aqui, no cliente, após a server action retornar
+    if (result.success) {
+      toast.success('API key revogada com sucesso.');
+    } else {
+      toast.error(result.error?._form?.[0] ?? 'Erro ao revogar key.');
+    }
+    return result;
+  },
+  null,
+);
+```
+
+**Por quê?**
+- `useEffect` é assíncrono em relação ao render — cria race conditions e duplas execuções em Strict Mode
+- O wrapper no `useActionState` é síncrono em relação ao fluxo da action — o toast dispara exatamente quando a action completa, antes do próximo render
+- Mantém toda a lógica de "o que fazer após a action" colocada junto à action, não espalhada no componente
+
+---
+
+### 5.2.2 `ActionButton` — componente genérico para Server Actions simples
+
+Para ações que **não precisam de formulário visível** (revogar, suspender, ativar, cancelar), crie um `<form>` com inputs hidden e um botão. Em vez de duplicar esse padrão em cada feature, use o componente genérico `ActionButton`.
+
+```tsx
+// src/components/shared/ActionButton.tsx
+'use client';
+
+import { useActionState } from 'react';
+import { Button } from '@/components/ui/button';
+import type { ComponentProps } from 'react';
+
+type ActionFn = (
+  prevState: unknown,
+  formData: FormData,
+) => Promise<unknown>;
+
+interface ActionButtonProps extends ComponentProps<typeof Button> {
+  /** Server Action a ser chamada no submit */
+  action: ActionFn;
+  /** Campos a serem enviados como inputs hidden: { chave: valor } */
+  data?: Record<string, string>;
+  children?: React.ReactNode;
+}
+
+export function ActionButton({
+  action,
+  data = {},
+  children,
+  disabled,
+  ...buttonProps
+}: ActionButtonProps) {
+  const [, formAction, isPending] = useActionState(action, null);
+
+  return (
+    <form action={formAction}>
+      {Object.entries(data).map(([key, value]) => (
+        <input key={key} type="hidden" name={key} value={value} />
+      ))}
+      <Button type="submit" disabled={isPending || disabled} {...buttonProps}>
+        {children ?? 'Confirmar'}
+      </Button>
+    </form>
+  );
+}
+```
+
+**Uso:**
+
+```tsx
+// Revogar API Key — sem form manual, sem estado local
+<ActionButton
+  action={revokeApiKeyAction}
+  data={{ id: apiKey.id }}
+  variant="destructive"
+  size="sm"
+>
+  Revogar
+</ActionButton>
+
+// Admin: suspender cliente
+<ActionButton
+  action={suspendCustomerAction}
+  data={{ userId: customer.id }}
+  variant="outline"
+>
+  Suspender conta
+</ActionButton>
+
+// Admin: ativar assinatura
+<ActionButton
+  action={activateSubscriptionAction}
+  data={{ userId: customer.id, tier: 'basic' }}
+>
+  Ativar plano Basic
+</ActionButton>
+```
+
+**Quando usar `ActionButton` vs `useActionState` manual:**
+
+| Situação | Padrão |
+|---|---|
+| Ação com campos visíveis (label, email, etc.) | `useActionState` manual no componente |
+| Ação de 1 clique com dados já disponíveis | `ActionButton` com `data={}` |
+| Ação que precisa de toast/redirect customizado | Wrapper no `useActionState` (seção 5.2.1) |
+| `ActionButton` com toast | Combine: crie wrapper com toast e passe para `ActionButton` |
+
+---
 
 ### 5.3 HTTP Client Centralizado
 
@@ -1665,6 +1808,8 @@ Antes de abrir o PR, revisar:
 - [ ] Componentes Client (`'use client'`) têm os mínimos de interatividade justificando o uso
 - [ ] Toda resposta da API é validada com Zod (nunca `as Type`)
 - [ ] Server Actions retornam `{ success: true, data }` ou `{ success: false, error }`
+- [ ] **Nenhum `useEffect` para reagir a resultado de Server Action** — toasts e redirects ficam dentro do wrapper do `useActionState` (seção 5.2.1)
+- [ ] **Ações de 1 clique usam `<ActionButton>`** em vez de form/state manual (seção 5.2.2)
 - [ ] Issues do GitHub atualizadas antes de fechar
 - [ ] Testes cobrem o caminho feliz E os casos de erro
 
@@ -1699,7 +1844,8 @@ Antes de abrir o PR, revisar:
 | **ADR** | Architecture Decision Record. Documentação de decisões técnicas significativas com contexto, alternativas e consequências. |
 | **TDD** | Test-Driven Development. Red-Green-Refactor: escrever teste que falha → código mínimo para passar → refatorar. |
 | **MSW** | Mock Service Worker. Intercepta fetch em testes de integração para simular a Voxa API sem servidor real. |
-| **useActionState** | Hook React 19 para gerenciar estado de Server Actions em formulários: `const [state, action, isPending] = useActionState(myAction, null)`. |
+| **useActionState** | Hook React 19 para gerenciar estado de Server Actions. Aceita qualquer `async fn`, não apenas Server Actions puras — use isso para envolver a action com efeitos colaterais (toast, redirect) **sem `useEffect`**. Padrão: `const [state, action, isPending] = useActionState(async (prev, formData) => { const result = await myAction(prev, formData); if (result.success) toast.success(...); return result; }, null)`. |
+| **ActionButton** | Componente `'use client'` genérico em `src/components/shared/ActionButton.tsx`. Renderiza um `<form>` com `useActionState`, aceita `action` (Server Action) e `data` (Record de inputs hidden). Elimina boilerplate de form + hidden inputs para ações de 1 clique (revogar, suspender, ativar). Ver seção 5.2.2. |
 | **revalidatePath** | Função Next.js que invalida o cache de uma rota, forçando re-fetch no próximo acesso. Chamada após mutações bem-sucedidas. |
 | **middleware.ts** | Arquivo especial do Next.js que roda na edge (antes do render) para proteção de rotas, redirects, etc. |
 | **Audit Log** | Registro imutável de uma ação crítica feita por admin ou sistema (ex: assinatura suspensa, key revogada). |
