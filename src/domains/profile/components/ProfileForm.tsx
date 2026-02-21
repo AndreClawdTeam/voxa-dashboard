@@ -2,10 +2,9 @@
 
 import { useActionState } from 'react';
 import { toast } from 'sonner';
+import { FormField } from '@/components/shared/FormField';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import type { UpdateProfileState } from '../actions';
 import { updateProfileAction } from '../actions';
 import type { UserProfile } from '../schemas';
@@ -28,8 +27,11 @@ export function ProfileForm({ profile }: Props) {
     null,
   );
 
-  const currentName = state?.success ? state.data.name : profile.name;
-  const currentEmail = state?.success ? state.data.email : profile.email;
+  const currentName = state?.success ? state.data.name : (state?.fields?.name ?? profile.name);
+  const currentEmail = state?.success ? state.data.email : (state?.fields?.email ?? profile.email);
+
+  const errors = state && !state.success ? state.error : null;
+  const formError = errors?._form?.[0];
 
   return (
     <Card>
@@ -38,48 +40,28 @@ export function ProfileForm({ profile }: Props) {
       </CardHeader>
       <CardContent>
         <form action={formAction} className="space-y-4">
-          {state && !state.success && state.apiError && (
+          {formError && (
             <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              {state.apiError}
+              {formError}
             </div>
           )}
 
-          <div className="space-y-1">
-            <Label htmlFor="name">Nome</Label>
-            <Input
-              id="name"
-              name="name"
-              defaultValue={currentName}
-              disabled={isPending}
-              aria-describedby={
-                state && !state.success && state.errors?.name ? 'name-error' : undefined
-              }
-            />
-            {state && !state.success && state.errors?.name && (
-              <p id="name-error" className="text-xs text-red-600">
-                {state.errors.name[0]}
-              </p>
-            )}
-          </div>
+          <FormField
+            name="name"
+            label="Nome"
+            defaultValue={currentName}
+            disabled={isPending}
+            errors={errors}
+          />
 
-          <div className="space-y-1">
-            <Label htmlFor="email">E-mail</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              defaultValue={currentEmail}
-              disabled={isPending}
-              aria-describedby={
-                state && !state.success && state.errors?.email ? 'email-error' : undefined
-              }
-            />
-            {state && !state.success && state.errors?.email && (
-              <p id="email-error" className="text-xs text-red-600">
-                {state.errors.email[0]}
-              </p>
-            )}
-          </div>
+          <FormField
+            name="email"
+            label="E-mail"
+            type="email"
+            defaultValue={currentEmail}
+            disabled={isPending}
+            errors={errors}
+          />
 
           <Button type="submit" disabled={isPending} className="w-full">
             {isPending ? (

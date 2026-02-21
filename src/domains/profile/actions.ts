@@ -9,31 +9,33 @@ import { updateProfile } from './service';
 
 export type UpdateProfileState =
   | { success: true; data: UserProfile }
-  | { success: false; errors?: Record<string, string[]>; apiError?: string }
+  | { success: false; error: Record<string, string[]>; fields?: Record<string, string> }
   | null;
 
 export async function updateProfileAction(
   _prevState: UpdateProfileState,
   formData: FormData,
 ): Promise<UpdateProfileState> {
+  const name = (formData.get('name') as string) ?? '';
+  const email = (formData.get('email') as string) ?? '';
+
   // Verificar autenticação
   const user = await getCurrentUser().catch(() => null);
   if (!user) {
-    return { success: false, apiError: 'Não autenticado. Faça login novamente.' };
+    return {
+      success: false,
+      error: { _form: ['Não autenticado. Faça login novamente.'] },
+      fields: { name, email },
+    };
   }
 
-  const raw = {
-    name: formData.get('name'),
-    email: formData.get('email'),
-  };
-
-  const parsed = UpdateProfileSchema.safeParse(raw);
+  const parsed = UpdateProfileSchema.safeParse({ name, email });
   if (!parsed.success) {
-    const errors: Record<string, string[]> = {};
+    const fieldErrors: Record<string, string[]> = {};
     for (const [field, msgs] of Object.entries(parsed.error.flatten().fieldErrors)) {
-      errors[field] = msgs ?? [];
+      fieldErrors[field] = msgs ?? [];
     }
-    return { success: false, errors };
+    return { success: false, error: fieldErrors, fields: { name, email } };
   }
 
   try {
@@ -42,9 +44,17 @@ export async function updateProfileAction(
     return { success: true, data: updated };
   } catch (err) {
     if (isVoxaApiError(err)) {
-      return { success: false, apiError: err.message };
+      return {
+        success: false,
+        error: { _form: [err.message] },
+        fields: { name, email },
+      };
     }
     // Não vazar detalhes internos de erros inesperados para o cliente
-    return { success: false, apiError: 'Erro ao atualizar perfil. Tente novamente.' };
+    return {
+      success: false,
+      error: { _form: ['Erro ao atualizar perfil. Tente novamente.'] },
+      fields: { name, email },
+    };
   }
 }

@@ -2,9 +2,8 @@
 
 import { useActionState } from 'react';
 import { toast } from 'sonner';
+import { FormField } from '@/components/shared/FormField';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import type { FieldActionResult } from '@/lib/action-result';
 import { registerAction } from '../actions';
 
@@ -23,29 +22,34 @@ export function RegisterForm() {
 
   return (
     <form action={action} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="name">Nome</Label>
-        <Input id="name" name="name" type="text" placeholder="Seu nome completo" required />
-        {state && !state.success && state.error.name && (
-          <p className="text-sm text-destructive">{state.error.name[0]}</p>
-        )}
-      </div>
+      <FormField
+        name="name"
+        label="Nome"
+        type="text"
+        placeholder="Seu nome completo"
+        defaultValue={state?.success === false ? (state.fields?.name ?? '') : ''}
+        errors={state?.success === false ? state.error : null}
+        required
+      />
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" placeholder="voce@exemplo.com" required />
-        {state && !state.success && state.error.email && (
-          <p className="text-sm text-destructive">{state.error.email[0]}</p>
-        )}
-      </div>
+      <FormField
+        name="email"
+        label="Email"
+        type="email"
+        placeholder="voce@exemplo.com"
+        defaultValue={state?.success === false ? (state.fields?.email ?? '') : ''}
+        errors={state?.success === false ? state.error : null}
+        required
+      />
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="password">Senha</Label>
-        <Input id="password" name="password" type="password" placeholder="••••••••" required />
-        {state && !state.success && state.error.password && (
-          <p className="text-sm text-destructive">{state.error.password[0]}</p>
-        )}
-      </div>
+      <FormField
+        name="password"
+        label="Senha"
+        type="password"
+        placeholder="••••••••"
+        errors={state?.success === false ? state.error : null}
+        required
+      />
 
       <Button type="submit" disabled={isPending} className="w-full">
         {isPending ? 'Criando conta...' : 'Criar conta'}

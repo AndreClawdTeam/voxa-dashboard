@@ -44,6 +44,9 @@ export async function loginAction(
     return {
       success: false,
       error: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+      fields: {
+        email: (formData.get('email') as string) ?? '',
+      },
     };
   }
 
@@ -52,9 +55,21 @@ export async function loginAction(
     await setAuthCookies(accessToken, user.role);
   } catch (err) {
     if (isVoxaApiError(err)) {
-      return { success: false, error: { _form: [err.message] } };
+      return {
+        success: false,
+        error: { _form: [err.message] },
+        fields: {
+          email: (formData.get('email') as string) ?? '',
+        },
+      };
     }
-    return { success: false, error: { _form: ['Erro inesperado. Tente novamente.'] } };
+    return {
+      success: false,
+      error: { _form: ['Erro inesperado. Tente novamente.'] },
+      fields: {
+        email: (formData.get('email') as string) ?? '',
+      },
+    };
   }
 
   redirect('/dashboard');
@@ -74,6 +89,10 @@ export async function registerAction(
     return {
       success: false,
       error: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+      fields: {
+        name: (formData.get('name') as string) ?? '',
+        email: (formData.get('email') as string) ?? '',
+      },
     };
   }
 
@@ -86,9 +105,23 @@ export async function registerAction(
     await setAuthCookies(accessToken, user.role);
   } catch (err) {
     if (isVoxaApiError(err)) {
-      return { success: false, error: { _form: [err.message] } };
+      return {
+        success: false,
+        error: { _form: [err.message] },
+        fields: {
+          name: (formData.get('name') as string) ?? '',
+          email: (formData.get('email') as string) ?? '',
+        },
+      };
     }
-    return { success: false, error: { _form: ['Erro inesperado. Tente novamente.'] } };
+    return {
+      success: false,
+      error: { _form: ['Erro inesperado. Tente novamente.'] },
+      fields: {
+        name: (formData.get('name') as string) ?? '',
+        email: (formData.get('email') as string) ?? '',
+      },
+    };
   }
 
   redirect('/dashboard');

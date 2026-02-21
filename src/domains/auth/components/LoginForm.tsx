@@ -1,10 +1,9 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { FormField } from '@/components/shared/FormField';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import type { FieldActionResult } from '@/lib/action-result';
 import { loginAction } from '../actions';
 
@@ -19,8 +18,28 @@ function getSecsRemaining(lockedUntil: number | null): number {
 export function LoginForm() {
   const [failCount, setFailCount] = useState(0);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
+  const [secsRemaining, setSecsRemaining] = useState(() => getSecsRemaining(null));
 
-  const secsRemaining = getSecsRemaining(lockedUntil);
+  // Tick a cada segundo quando o lockout está ativo
+  useEffect(() => {
+    if (!lockedUntil) {
+      setSecsRemaining(0);
+      return;
+    }
+
+    // Atualiza imediatamente ao ativar o lockout
+    setSecsRemaining(getSecsRemaining(lockedUntil));
+
+    // Depois tick a cada segundo
+    const interval = setInterval(() => {
+      const remaining = getSecsRemaining(lockedUntil);
+      setSecsRemaining(remaining);
+      if (remaining <= 0) clearInterval(interval);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [lockedUntil]);
+
   const isLocked = secsRemaining > 0;
 
   const [state, action, isPending] = useActionState(
@@ -60,21 +79,24 @@ export function LoginForm() {
 
   return (
     <form action={action} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" placeholder="voce@exemplo.com" required />
-        {state && !state.success && state.error.email && (
-          <p className="text-sm text-destructive">{state.error.email[0]}</p>
-        )}
-      </div>
+      <FormField
+        name="email"
+        label="Email"
+        type="email"
+        placeholder="voce@exemplo.com"
+        defaultValue={state?.success === false ? (state.fields?.email ?? '') : ''}
+        errors={state?.success === false ? state.error : null}
+        required
+      />
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="password">Senha</Label>
-        <Input id="password" name="password" type="password" placeholder="••••••••" required />
-        {state && !state.success && state.error.password && (
-          <p className="text-sm text-destructive">{state.error.password[0]}</p>
-        )}
-      </div>
+      <FormField
+        name="password"
+        label="Senha"
+        type="password"
+        placeholder="••••••••"
+        errors={state?.success === false ? state.error : null}
+        required
+      />
 
       {isLocked && (
         <p className="text-sm text-destructive text-center">
