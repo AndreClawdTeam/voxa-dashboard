@@ -1,11 +1,14 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 import { getCurrentUser } from '@/domains/auth/service';
 import { isVoxaApiError } from '@/lib/services';
 import type { ApiKey } from './schemas';
 import { CreateApiKeyInputSchema } from './schemas';
 import { createApiKey, revokeApiKey } from './service';
+
+const RevokeApiKeySchema = z.object({ id: z.string().uuid('ID de API key inválido') });
 
 // ─── Tipos de retorno ─────────────────────────────────────────────────────────
 
@@ -64,8 +67,14 @@ export async function revokeApiKeyAction(id: string): Promise<RevokeApiKeyResult
     return { success: false, error: 'Não autenticado. Faça login novamente.' };
   }
 
+  // Validar formato do ID
+  const parsed = RevokeApiKeySchema.safeParse({ id });
+  if (!parsed.success) {
+    return { success: false, error: 'ID de API key inválido.' };
+  }
+
   try {
-    await revokeApiKey(id);
+    await revokeApiKey(parsed.data.id);
     revalidatePath('/dashboard/api-keys');
     return { success: true };
   } catch (err) {

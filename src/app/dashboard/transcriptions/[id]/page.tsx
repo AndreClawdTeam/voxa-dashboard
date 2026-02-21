@@ -6,6 +6,7 @@ import { LanguageConfidenceBar } from '@/domains/transcriptions/components/Langu
 import { TranscriptionStatusBadge } from '@/domains/transcriptions/components/TranscriptionStatusBadge';
 import { TranscriptionTextViewer } from '@/domains/transcriptions/components/TranscriptionTextViewer';
 import { formatDuration, formatFileSize } from '@/domains/transcriptions/helpers';
+import type { Transcription } from '@/domains/transcriptions/schemas';
 import { getTranscription } from '@/domains/transcriptions/service';
 
 export const dynamic = 'force-dynamic';
@@ -26,7 +27,7 @@ export default async function TranscriptionDetailPage({
     notFound();
   }
 
-  let transcription;
+  let transcription: Transcription;
   try {
     transcription = await getTranscription(idParsed.data);
   } catch {
