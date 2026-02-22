@@ -12,16 +12,16 @@ vi.mock('@/lib/auth/require-auth', () => ({
   }),
 }));
 
-vi.mock('@/lib/env', () => ({
-  env: {
-    NEXT_PUBLIC_VOXA_API_URL: 'http://138.197.19.184:3000',
-    NEXT_PUBLIC_APP_URL: 'http://localhost:3001',
-    NODE_ENV: 'test',
-  },
+// Mock service — não mockar fetch diretamente; responsabilidade do service
+vi.mock('./service', () => ({
+  transcribeAudio: vi.fn(),
+  listTranscriptions: vi.fn(),
 }));
 
 import { revalidatePath } from 'next/cache';
+import { VoxaApiError, VoxaNetworkError } from '@/lib/services';
 import { transcribeAudioAction } from './actions';
+import { transcribeAudio } from './service';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -37,16 +37,14 @@ function makeFormData(file: File | null, apiKey: string | null): FormData {
   return fd;
 }
 
-const MOCK_API_RESPONSE = {
-  data: {
-    id: 'trans-123',
-    text: 'Olá mundo, esta é uma transcrição.',
-    language: 'pt-BR',
-    duration: 5.2,
-    wordCount: 7,
-    processingTime: 1234,
-    createdAt: '2026-02-22T12:00:00Z',
-  },
+const MOCK_TRANSCRIPTION_DATA = {
+  id: 'trans-123',
+  text: 'Olá mundo, esta é uma transcrição.',
+  language: 'pt-BR',
+  duration: 5.2,
+  wordCount: 7,
+  processingTime: 1234,
+  createdAt: '2026-02-22T12:00:00Z',
 };
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -54,7 +52,6 @@ const MOCK_API_RESPONSE = {
 describe('transcribeAudioAction', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubGlobal('fetch', vi.fn());
   });
 
   // ─── Validação de arquivo ─────────────────────────────────────────────────
@@ -68,7 +65,7 @@ describe('transcribeAudioAction', () => {
     if (!result.success) {
       expect(result.error).toMatch(/nenhum arquivo/i);
     }
-    expect(fetch).not.toHaveBeenCalled();
+    expect(transcribeAudio).not.toHaveBeenCalled();
   });
 
   it('deve retornar erro quando o arquivo tem formato inválido', async () => {
@@ -81,7 +78,7 @@ describe('transcribeAudioAction', () => {
     if (!result.success) {
       expect(result.error).toMatch(/\.pdf.*não suportado/i);
     }
-    expect(fetch).not.toHaveBeenCalled();
+    expect(transcribeAudio).not.toHaveBeenCalled();
   });
 
   it('deve retornar erro quando o arquivo excede 25MB', async () => {
@@ -94,7 +91,7 @@ describe('transcribeAudioAction', () => {
     if (!result.success) {
       expect(result.error).toMatch(/muito grande/i);
     }
-    expect(fetch).not.toHaveBeenCalled();
+    expect(transcribeAudio).not.toHaveBeenCalled();
   });
 
   // ─── Validação de API Key ──────────────────────────────────────────────────
@@ -109,7 +106,7 @@ describe('transcribeAudioAction', () => {
     if (!result.success) {
       expect(result.error).toMatch(/api key/i);
     }
-    expect(fetch).not.toHaveBeenCalled();
+    expect(transcribeAudio).not.toHaveBeenCalled();
   });
 
   it('deve retornar erro quando a API Key não é fornecida', async () => {
@@ -122,13 +119,15 @@ describe('transcribeAudioAction', () => {
     if (!result.success) {
       expect(result.error).toMatch(/api key/i);
     }
-    expect(fetch).not.toHaveBeenCalled();
+    expect(transcribeAudio).not.toHaveBeenCalled();
   });
 
-  // ─── Erros de rede ─────────────────────────────────────────────────────────
+  // ─── Erros do service ─────────────────────────────────────────────────────
 
-  it('deve retornar erro de rede quando fetch lança exceção', async () => {
-    vi.mocked(fetch).mockRejectedValue(new Error('Network error'));
+  it('deve retornar erro de rede quando o service lança VoxaNetworkError', async () => {
+    vi.mocked(transcribeAudio).mockRejectedValue(
+      new VoxaNetworkError('Erro de rede. Verifique sua conexão e tente novamente.'),
+    );
 
     const file = makeFile('audio.mp3');
     const fd = makeFormData(file, 'vxa_testkey123');
@@ -141,13 +140,9 @@ describe('transcribeAudioAction', () => {
     }
   });
 
-  // ─── Erros HTTP ────────────────────────────────────────────────────────────
-
-  it('deve retornar erro de API Key inválida para 401', async () => {
-    vi.mocked(fetch).mockResolvedValue(
-      new Response(JSON.stringify({ error: 'Unauthorized', code: 'UNAUTHORIZED' }), {
-        status: 401,
-      }),
+  it('deve retornar erro de API Key inválida para statusCode 401', async () => {
+    vi.mocked(transcribeAudio).mockRejectedValue(
+      new VoxaApiError('Unauthorized', 'UNAUTHORIZED', undefined, 401),
     );
 
     const file = makeFile('audio.mp3');
@@ -161,11 +156,9 @@ describe('transcribeAudioAction', () => {
     }
   });
 
-  it('deve retornar erro de rate limit para 429', async () => {
-    vi.mocked(fetch).mockResolvedValue(
-      new Response(JSON.stringify({ error: 'Too Many Requests', code: 'RATE_LIMIT_EXCEEDED' }), {
-        status: 429,
-      }),
+  it('deve retornar erro de rate limit para statusCode 429', async () => {
+    vi.mocked(transcribeAudio).mockRejectedValue(
+      new VoxaApiError('Too Many Requests', 'RATE_LIMIT_EXCEEDED', undefined, 429),
     );
 
     const file = makeFile('audio.mp3');
@@ -179,11 +172,9 @@ describe('transcribeAudioAction', () => {
     }
   });
 
-  it('deve retornar erro genérico para outros erros HTTP', async () => {
-    vi.mocked(fetch).mockResolvedValue(
-      new Response(JSON.stringify({ error: 'Internal Server Error', code: 'SERVER_ERROR' }), {
-        status: 500,
-      }),
+  it('deve retornar mensagem de erro da API para outros erros HTTP', async () => {
+    vi.mocked(transcribeAudio).mockRejectedValue(
+      new VoxaApiError('Internal Server Error', 'SERVER_ERROR', undefined, 500),
     );
 
     const file = makeFile('audio.mp3');
@@ -193,18 +184,29 @@ describe('transcribeAudioAction', () => {
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      // Deve conter a mensagem de erro da API ou o status code
       expect(result.error).toBeTruthy();
       expect(typeof result.error).toBe('string');
+    }
+  });
+
+  it('deve retornar erro genérico para erros não esperados', async () => {
+    vi.mocked(transcribeAudio).mockRejectedValue(new Error('Unexpected error'));
+
+    const file = makeFile('audio.mp3');
+    const fd = makeFormData(file, 'vxa_testkey123');
+
+    const result = await transcribeAudioAction(fd);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toMatch(/erro inesperado/i);
     }
   });
 
   // ─── Sucesso ───────────────────────────────────────────────────────────────
 
   it('deve retornar dados de transcrição em caso de sucesso', async () => {
-    vi.mocked(fetch).mockResolvedValue(
-      new Response(JSON.stringify(MOCK_API_RESPONSE), { status: 200 }),
-    );
+    vi.mocked(transcribeAudio).mockResolvedValue(MOCK_TRANSCRIPTION_DATA);
 
     const file = makeFile('audio.mp3');
     const fd = makeFormData(file, 'vxa_testkey123');
@@ -220,9 +222,7 @@ describe('transcribeAudioAction', () => {
   });
 
   it('deve chamar revalidatePath após sucesso', async () => {
-    vi.mocked(fetch).mockResolvedValue(
-      new Response(JSON.stringify(MOCK_API_RESPONSE), { status: 200 }),
-    );
+    vi.mocked(transcribeAudio).mockResolvedValue(MOCK_TRANSCRIPTION_DATA);
 
     const file = makeFile('audio.mp3');
     const fd = makeFormData(file, 'vxa_testkey123');
@@ -232,32 +232,19 @@ describe('transcribeAudioAction', () => {
     expect(revalidatePath).toHaveBeenCalledWith('/dashboard/transcriptions');
   });
 
-  it('deve enviar Authorization: Bearer com a API Key correta', async () => {
-    vi.mocked(fetch).mockResolvedValue(
-      new Response(JSON.stringify(MOCK_API_RESPONSE), { status: 200 }),
-    );
+  it('deve chamar transcribeAudio com arquivo e API Key corretos', async () => {
+    vi.mocked(transcribeAudio).mockResolvedValue(MOCK_TRANSCRIPTION_DATA);
 
     const file = makeFile('audio.mp3');
     const fd = makeFormData(file, 'vxa_mykey999');
 
     await transcribeAudioAction(fd);
 
-    expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/v1/transcribe'),
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          Authorization: 'Bearer vxa_mykey999',
-        }),
-      }),
-    );
+    expect(transcribeAudio).toHaveBeenCalledWith(file, 'vxa_mykey999');
   });
 
   it('deve aceitar formatos de áudio suportados: wav, ogg, mp4, m4a, flac, webm', async () => {
-    // Usar mockImplementation para criar um novo Response a cada chamada
-    // (body de Response só pode ser lido uma vez)
-    vi.mocked(fetch).mockImplementation(() =>
-      Promise.resolve(new Response(JSON.stringify(MOCK_API_RESPONSE), { status: 200 })),
-    );
+    vi.mocked(transcribeAudio).mockResolvedValue(MOCK_TRANSCRIPTION_DATA);
 
     for (const format of ['wav', 'ogg', 'mp4', 'm4a', 'flac', 'webm']) {
       const file = makeFile(`audio.${format}`);

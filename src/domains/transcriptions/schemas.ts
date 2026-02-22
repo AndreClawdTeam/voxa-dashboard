@@ -51,3 +51,21 @@ export const TranscriptionListParamsSchema = z.object({
 });
 
 export type TranscriptionListParams = z.infer<typeof TranscriptionListParamsSchema>;
+
+// ─── Resultado de transcrição (POST /api/v1/transcribe) ───────────────────────
+
+export const TranscriptionDataSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  language: z.string(),
+  duration: z.number(),
+  wordCount: z.number(),
+  processingTime: z.number(),
+  createdAt: z.string(),
+});
+
+export type TranscriptionData = z.infer<typeof TranscriptionDataSchema>;
+
+export const TranscribeResponseSchema = z.object({
+  data: TranscriptionDataSchema,
+});

@@ -99,7 +99,7 @@ describe('NewTranscriptionDialog', () => {
     expect(screen.queryByText('Key Revogada')).not.toBeInTheDocument();
   });
 
-  it('deve exibir botão Transcrever desabilitado inicialmente', async () => {
+  it('deve exibir botão Transcrever desabilitado inicialmente (sem arquivo)', async () => {
     await openDialog();
     expect(screen.getByRole('button', { name: /transcrever/i })).toBeDisabled();
   });
@@ -159,17 +159,15 @@ describe('NewTranscriptionDialog', () => {
 
   // ─── Habilitação do botão ──────────────────────────────────────────────────
 
-  it('deve habilitar o botão Transcrever apenas com arquivo e API Key preenchidos', async () => {
+  it('deve habilitar o botão Transcrever após selecionar arquivo válido', async () => {
     const user = await openDialog();
     const fileInput = screen.getByLabelText(/arquivo de áudio/i);
-    const keyInput = screen.getByLabelText(/valor da api key/i);
 
-    // Ainda desabilitado com apenas arquivo
-    await user.upload(fileInput, makeAudioFile());
+    // Inicialmente desabilitado (sem arquivo)
     expect(screen.getByRole('button', { name: /transcrever/i })).toBeDisabled();
 
-    // Habilitado após preencher a key
-    await user.type(keyInput, 'vxa_mykey123');
+    // Habilitado após selecionar arquivo válido
+    await user.upload(fileInput, makeAudioFile());
     expect(screen.getByRole('button', { name: /transcrever/i })).not.toBeDisabled();
   });
 

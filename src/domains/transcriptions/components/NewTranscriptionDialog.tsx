@@ -1,7 +1,7 @@
 'use client';
 
 import { Loader2, Plus } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useActionState, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { ApiKey } from '@/domains/api-keys/schemas';
+import type { TranscribeResult } from '../actions';
 import { transcribeAudioAction } from '../actions';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -56,18 +57,34 @@ export function NewTranscriptionDialog({ apiKeys }: NewTranscriptionDialogProps)
   const [open, setOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedApiKeyId, setSelectedApiKeyId] = useState<string>('');
-  const [apiKeyValue, setApiKeyValue] = useState<string>('');
   const [clientError, setClientError] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
-  const [isPending, setIsPending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const activeApiKeys = apiKeys.filter((k) => !k.isRevoked);
 
+  const [, formAction, isPending] = useActionState(
+    async (_prevState: TranscribeResult | null, formData: FormData): Promise<TranscribeResult> => {
+      setServerError(null);
+      const result = await transcribeAudioAction(formData);
+      if (result.success) {
+        setOpen(false);
+        setSelectedFile(null);
+        setSelectedApiKeyId('');
+        setClientError(null);
+        setServerError(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      } else {
+        setServerError(result.error);
+      }
+      return result;
+    },
+    null,
+  );
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
     setClientError(null);
-    setServerError(null);
 
     if (!file) {
       setSelectedFile(null);
@@ -102,7 +119,6 @@ export function NewTranscriptionDialog({ apiKeys }: NewTranscriptionDialogProps)
       if (!isOpen) {
         setSelectedFile(null);
         setSelectedApiKeyId('');
-        setApiKeyValue('');
         setClientError(null);
         setServerError(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -110,54 +126,8 @@ export function NewTranscriptionDialog({ apiKeys }: NewTranscriptionDialogProps)
     }
   }
 
-  function handleApiKeySelectChange(keyId: string) {
-    setSelectedApiKeyId(keyId);
-    setClientError(null);
-    setServerError(null);
-    // Pre-fill label hint (actual token must be pasted by user)
-  }
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setServerError(null);
-    setClientError(null);
-
-    if (!selectedFile) {
-      setClientError('Selecione um arquivo de áudio.');
-      return;
-    }
-
-    const trimmedKey = apiKeyValue.trim();
-    if (!trimmedKey) {
-      setClientError('Informe o valor da API Key.');
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('audio', selectedFile);
-    formData.append('apiKey', trimmedKey);
-
-    setIsPending(true);
-    try {
-      const result = await transcribeAudioAction(formData);
-      if (result.success) {
-        setOpen(false);
-        setSelectedFile(null);
-        setSelectedApiKeyId('');
-        setApiKeyValue('');
-        if (fileInputRef.current) fileInputRef.current.value = '';
-      } else {
-        setServerError(result.error);
-      }
-    } catch {
-      setServerError('Erro inesperado. Tente novamente.');
-    } finally {
-      setIsPending(false);
-    }
-  }
-
-  const canSubmit =
-    selectedFile !== null && apiKeyValue.trim() !== '' && !isPending && !clientError;
+  const displayError = clientError ?? serverError;
+  const canSubmit = selectedFile !== null && !clientError && !isPending;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -177,13 +147,14 @@ export function NewTranscriptionDialog({ apiKeys }: NewTranscriptionDialogProps)
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form action={formAction} className="space-y-4">
           {/* Seleção de arquivo */}
           <div className="space-y-2">
             <Label htmlFor="audio-file">Arquivo de áudio</Label>
             <input
               ref={fileInputRef}
               id="audio-file"
+              name="audio"
               type="file"
               accept={ALLOWED_ACCEPT}
               onChange={handleFileChange}
@@ -218,7 +189,10 @@ export function NewTranscriptionDialog({ apiKeys }: NewTranscriptionDialogProps)
               </Label>
               <Select
                 value={selectedApiKeyId}
-                onValueChange={handleApiKeySelectChange}
+                onValueChange={(keyId) => {
+                  setSelectedApiKeyId(keyId);
+                  setClientError(null);
+                }}
                 disabled={isPending}
               >
                 <SelectTrigger id="api-key-select">
@@ -236,7 +210,6 @@ export function NewTranscriptionDialog({ apiKeys }: NewTranscriptionDialogProps)
           )}
 
           {/* Valor da API Key */}
-
           <div className="space-y-2">
             <Label htmlFor="api-key-value">
               Valor da API Key{' '}
@@ -246,14 +219,9 @@ export function NewTranscriptionDialog({ apiKeys }: NewTranscriptionDialogProps)
             </Label>
             <Input
               id="api-key-value"
+              name="apiKey"
               type="password"
               placeholder="vxa_..."
-              value={apiKeyValue}
-              onChange={(e) => {
-                setApiKeyValue(e.target.value);
-                setClientError(null);
-                setServerError(null);
-              }}
               disabled={isPending}
               autoComplete="off"
             />
@@ -263,9 +231,9 @@ export function NewTranscriptionDialog({ apiKeys }: NewTranscriptionDialogProps)
           </div>
 
           {/* Erros */}
-          {(clientError ?? serverError) && (
+          {displayError && (
             <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2">
-              <p className="text-sm text-destructive">{clientError ?? serverError}</p>
+              <p className="text-sm text-destructive">{displayError}</p>
             </div>
           )}
 
