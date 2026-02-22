@@ -19,11 +19,11 @@ export async function listCustomers(
   const query = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (search?.trim()) query.set('search', search.trim());
 
-  return voxaGet(`/api/v1/admin/customers?${query.toString()}`, CustomerListResponseSchema);
+  return voxaGet(`/api/v1/admin/users?${query.toString()}`, CustomerListResponseSchema);
 }
 
 export async function getCustomer(id: string): Promise<AdminCustomerDetail> {
-  const result = await voxaGet(`/api/v1/admin/customers/${id}`, CustomerDetailResponseSchema);
+  const result = await voxaGet(`/api/v1/admin/users/${id}`, CustomerDetailResponseSchema);
   return result.data;
 }
 
@@ -32,7 +32,7 @@ export async function updateCustomerSubscription(
   data: UpdateSubscriptionInput,
 ): Promise<AdminSubscription> {
   const result = await voxaPatch(
-    `/api/v1/admin/customers/${customerId}/subscription`,
+    `/api/v1/admin/users/${customerId}/subscription`,
     data,
     UpdateSubscriptionResponseSchema,
   );
