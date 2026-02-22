@@ -1,18 +1,27 @@
 'use client';
 
+import { ScrollText, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
+const ADMIN_ICON_MAP = {
+  customers: Users,
+  'audit-logs': ScrollText,
+} as const;
+
+export type AdminIconName = keyof typeof ADMIN_ICON_MAP;
+
 interface AdminNavButtonProps {
   href: string;
   label: string;
-  icon: React.ComponentType<{ size?: number }>;
+  iconName: AdminIconName;
 }
 
-export function AdminNavButton({ href, label, icon: Icon }: AdminNavButtonProps) {
+export function AdminNavButton({ href, label, iconName }: AdminNavButtonProps) {
   const pathname = usePathname();
   const isActive = pathname === href || pathname.startsWith(`${href}/`);
+  const Icon = ADMIN_ICON_MAP[iconName];
 
   return (
     <Link

@@ -1,11 +1,11 @@
-import { ScrollText, Users } from 'lucide-react';
 import Link from 'next/link';
 import { LogoutButton } from '@/domains/auth/components/LogoutButton';
+import type { AdminIconName } from './AdminNavButton';
 import { AdminNavButton } from './AdminNavButton';
 
-const navItems = [
-  { href: '/admin/customers', label: 'Clientes', icon: Users },
-  { href: '/admin/audit-logs', label: 'Audit Logs', icon: ScrollText },
+const navItems: Array<{ href: string; label: string; iconName: AdminIconName }> = [
+  { href: '/admin/customers', label: 'Clientes', iconName: 'customers' },
+  { href: '/admin/audit-logs', label: 'Audit Logs', iconName: 'audit-logs' },
 ];
 
 export function AdminSidebar() {
@@ -17,8 +17,8 @@ export function AdminSidebar() {
         </span>
       </div>
       <nav className="flex-1 p-2 space-y-1">
-        {navItems.map(({ href, label, icon }) => (
-          <AdminNavButton key={href} href={href} label={label} icon={icon} />
+        {navItems.map(({ href, label, iconName }) => (
+          <AdminNavButton key={href} href={href} label={label} iconName={iconName} />
         ))}
       </nav>
       <div className="p-4 border-t flex flex-col gap-2">

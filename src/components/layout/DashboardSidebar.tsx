@@ -1,28 +1,24 @@
-import {
-  ClipboardList,
-  CreditCard,
-  FileText,
-  Key,
-  LayoutDashboard,
-  User,
-  Users,
-  Zap,
-} from 'lucide-react';
 import { LogoutButton } from '@/domains/auth/components/LogoutButton';
+import type { DashboardIconName } from './DashboardNavButton';
 import { DashboardNavButton } from './DashboardNavButton';
 
-const navItems = [
-  { href: '/dashboard', label: 'Overview', icon: LayoutDashboard, exactMatch: true },
-  { href: '/dashboard/quickstart', label: 'Quickstart', icon: Zap },
-  { href: '/dashboard/api-keys', label: 'API Keys', icon: Key },
-  { href: '/dashboard/transcriptions', label: 'Transcrições', icon: FileText },
-  { href: '/dashboard/profile', label: 'Perfil', icon: User },
-  { href: '/dashboard/subscription', label: 'Assinatura', icon: CreditCard },
+const navItems: Array<{
+  href: string;
+  label: string;
+  iconName: DashboardIconName;
+  exactMatch?: boolean;
+}> = [
+  { href: '/dashboard', label: 'Overview', iconName: 'dashboard', exactMatch: true },
+  { href: '/dashboard/quickstart', label: 'Quickstart', iconName: 'quickstart' },
+  { href: '/dashboard/api-keys', label: 'API Keys', iconName: 'api-keys' },
+  { href: '/dashboard/transcriptions', label: 'Transcrições', iconName: 'transcriptions' },
+  { href: '/dashboard/profile', label: 'Perfil', iconName: 'profile' },
+  { href: '/dashboard/subscription', label: 'Assinatura', iconName: 'subscription' },
 ];
 
-const adminNavItems = [
-  { href: '/admin/customers', label: 'Clientes', icon: Users },
-  { href: '/admin/audit-logs', label: 'Audit Logs', icon: ClipboardList },
+const adminNavItems: Array<{ href: string; label: string; iconName: DashboardIconName }> = [
+  { href: '/admin/customers', label: 'Clientes', iconName: 'customers' },
+  { href: '/admin/audit-logs', label: 'Audit Logs', iconName: 'audit-logs' },
 ];
 
 interface DashboardSidebarProps {
@@ -43,7 +39,7 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
             key={item.href}
             href={item.href}
             label={item.label}
-            icon={item.icon}
+            iconName={item.iconName}
             exactMatch={item.exactMatch}
           />
         ))}
@@ -60,7 +56,7 @@ export function DashboardSidebar({ userRole }: DashboardSidebarProps) {
                 key={item.href}
                 href={item.href}
                 label={item.label}
-                icon={item.icon}
+                iconName={item.iconName}
               />
             ))}
           </>
