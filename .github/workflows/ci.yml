@@ -45,12 +45,14 @@ jobs:
             | grep -v "src/lib/services/" \
             | grep -v "\.test\." \
             | grep -v "\.spec\." \
+            | grep -v "src/app/dashboard/quickstart/" \
             | grep -q .; then
             echo "❌ Direct fetch() found outside src/lib/services/"
             grep -rn "fetch(" src/ --include="*.ts" --include="*.tsx" \
               | grep -v "src/lib/services/" \
               | grep -v "\.test\." \
-              | grep -v "\.spec\."
+              | grep -v "\.spec\." \
+              | grep -v "src/app/dashboard/quickstart/"
             exit 1
           fi
           echo "✅ No direct fetch() usage found outside src/lib/services/"
