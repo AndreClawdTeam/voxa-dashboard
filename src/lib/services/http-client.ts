@@ -209,3 +209,88 @@ export const voxaPatch = <T>(endpoint: string, body: unknown, schema: z.ZodSchem
 
 export const voxaDelete = <T>(endpoint: string, schema: z.ZodSchema<T>): Promise<T> =>
   voxaFetch({ endpoint, method: 'DELETE', schema });
+
+// ─── FormData fetch (API Key auth, multipart) ─────────────────────────────────
+
+/**
+ * Faz fetch com FormData e Authorization customizado (API Key Bearer).
+ * Usado para endpoints que não usam sessão JWT e requerem multipart/form-data.
+ * Exemplo: POST /api/v1/transcribe — autenticado com API Key do usuário (vxa_...).
+ */
+export async function voxaFetchFormData<T>(
+  endpoint: string,
+  {
+    formData,
+    apiKey,
+    schema,
+  }: {
+    formData: FormData;
+    apiKey: string;
+    schema: z.ZodSchema<T>;
+  },
+): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`${env.NEXT_PUBLIC_VOXA_API_URL}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        // Sem Content-Type — o browser/Node define automaticamente com o boundary correto
+      },
+      body: formData,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[voxaFetchFormData] Network error', { endpoint, message: msg });
+    throw new VoxaNetworkError(`Falha na conexão com a API: ${msg}`);
+  }
+
+  if (!response.ok) {
+    let errorBody: unknown;
+    try {
+      errorBody = await response.json();
+    } catch {
+      errorBody = {};
+    }
+    const b = errorBody as Record<string, unknown>;
+    const errorMessage = typeof b.error === 'string' ? b.error : 'Erro na API';
+    const errorCode = typeof b.code === 'string' ? b.code : 'API_ERROR';
+
+    console.error('[voxaFetchFormData] API error response', {
+      endpoint,
+      status: response.status,
+      code: errorCode,
+      message: errorMessage,
+    });
+
+    throw new VoxaApiError(
+      errorMessage,
+      errorCode,
+      Array.isArray(b.details)
+        ? (b.details as Array<{ field: string; message: string }>)
+        : undefined,
+      response.status,
+    );
+  }
+
+  const json = await response.json();
+  const parsed = schema.safeParse(json);
+  if (!parsed.success) {
+    if (env.NODE_ENV !== 'production') {
+      console.error('[voxaFetchFormData] Schema validation failed (dev)', {
+        endpoint,
+        errors: parsed.error.format(),
+      });
+    } else {
+      const flat = parsed.error.flatten();
+      console.error('[voxaFetchFormData] Schema validation failed (prod)', {
+        endpoint,
+        fieldErrors: flat.fieldErrors,
+        formErrors: flat.formErrors,
+      });
+    }
+    throw new VoxaApiError('Resposta inesperada da API. Contate o suporte.', 'INVALID_RESPONSE');
+  }
+
+  return parsed.data;
+}

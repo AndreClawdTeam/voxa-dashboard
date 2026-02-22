@@ -10,4 +10,12 @@ export {
   VoxaNetworkError,
 } from './errors';
 export type { VoxaFetchOptions } from './http-client';
-export { voxaDelete, voxaFetch, voxaGet, voxaPatch, voxaPost, voxaPut } from './http-client';
+export {
+  voxaDelete,
+  voxaFetch,
+  voxaFetchFormData,
+  voxaGet,
+  voxaPatch,
+  voxaPost,
+  voxaPut,
+} from './http-client';

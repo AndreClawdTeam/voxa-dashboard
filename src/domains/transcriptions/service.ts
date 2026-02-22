@@ -1,8 +1,8 @@
 import 'server-only';
-import { voxaGet } from '@/lib/services';
+import { voxaFetchFormData, voxaGet } from '@/lib/services';
 import type { Pagination } from '@/lib/zod';
-import type { Transcription } from './schemas';
-import { TranscriptionListResponseSchema } from './schemas';
+import type { Transcription, TranscriptionData } from './schemas';
+import { TranscribeResponseSchema, TranscriptionListResponseSchema } from './schemas';
 
 export async function listTranscriptions({
   page = 1,
@@ -21,3 +21,16 @@ export async function listTranscriptions({
 // NOTE: There is no per-transcription detail endpoint in the API
 // (GET /dashboard/transcriptions/:id does not exist).
 // The list endpoint returns full transcription data for all items.
+
+export async function transcribeAudio(audioFile: File, apiKey: string): Promise<TranscriptionData> {
+  const formData = new FormData();
+  formData.append('audio', audioFile);
+
+  const result = await voxaFetchFormData('/api/v1/transcribe', {
+    formData,
+    apiKey,
+    schema: TranscribeResponseSchema,
+  });
+
+  return result.data;
+}

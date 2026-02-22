@@ -1,3 +1,5 @@
+import { listApiKeys } from '@/domains/api-keys/service';
+import { NewTranscriptionDialog } from '@/domains/transcriptions/components/NewTranscriptionDialog';
 import { TranscriptionPagination } from '@/domains/transcriptions/components/TranscriptionPagination';
 import { TranscriptionTable } from '@/domains/transcriptions/components/TranscriptionTable';
 import { TranscriptionListParamsSchema } from '@/domains/transcriptions/schemas';
@@ -18,7 +20,10 @@ export default async function TranscriptionsPage({
   const parsed = TranscriptionListParamsSchema.safeParse(params);
   const { page } = parsed.success ? parsed.data : { page: 1 };
 
-  const { data: transcriptions, pagination } = await listTranscriptions({ page });
+  const [{ data: transcriptions, pagination }, apiKeys] = await Promise.all([
+    listTranscriptions({ page }),
+    listApiKeys(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -29,6 +34,7 @@ export default async function TranscriptionsPage({
             Histórico de todas as suas transcrições.
           </p>
         </div>
+        <NewTranscriptionDialog apiKeys={apiKeys} />
       </div>
       <TranscriptionTable transcriptions={transcriptions} />
       <TranscriptionPagination pagination={pagination} currentPage={page} />
