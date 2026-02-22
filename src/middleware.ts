@@ -21,20 +21,15 @@ export function middleware(request: NextRequest) {
 
   // Logado tentando acessar rota pública → redirecionar para dashboard
   if (PUBLIC_PATHS.includes(pathname) && accessToken) {
-    const dest = userRole === 'admin' ? '/admin/customers' : '/dashboard';
-    return NextResponse.redirect(new URL(dest, request.url));
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  // /dashboard/* → requer autenticação (admins são redirecionados para /admin)
+  // /dashboard/* → requer autenticação
   if (pathname.startsWith('/dashboard')) {
     if (!accessToken) {
       const url = new URL('/login', request.url);
       url.searchParams.set('redirect', pathname);
       return NextResponse.redirect(url);
-    }
-    // Admins não devem acessar o portal de customers
-    if (userRole === 'admin') {
-      return NextResponse.redirect(new URL('/admin/customers', request.url));
     }
   }
 

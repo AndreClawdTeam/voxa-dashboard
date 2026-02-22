@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/domains/auth/service';
 import { SubscriptionCard } from '@/domains/subscriptions/components/SubscriptionCard';
 import { TrialCountdownBanner } from '@/domains/subscriptions/components/TrialCountdownBanner';
@@ -17,12 +16,6 @@ export default async function DashboardPage() {
     getCurrentSubscriptionSafe(),
     getCurrentUser(),
   ]);
-
-  // Admins não possuem subscription — redirecionar para o painel admin.
-  // O middleware já deve ter feito isso, mas garantimos aqui como fallback.
-  if (user.role === 'admin') {
-    redirect('/admin/customers');
-  }
 
   const showTrialBanner =
     subscription?.status === 'trial' &&
