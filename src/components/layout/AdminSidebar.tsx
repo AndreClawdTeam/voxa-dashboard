@@ -1,5 +1,3 @@
-'use client';
-
 import { ScrollText, Users } from 'lucide-react';
 import Link from 'next/link';
 import { LogoutButton } from '@/domains/auth/components/LogoutButton';
