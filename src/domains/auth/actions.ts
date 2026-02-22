@@ -1,0 +1,136 @@
+'use server';
+
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import type { ActionResult } from '@/lib/actions';
+
+type FieldActionResult = ActionResult;
+
+import { isVoxaApiError } from '@/lib/services';
+import { LoginSchema, RegisterSchema } from './schemas';
+import { loginUser, logoutUser, registerUser } from './service';
+
+async function setAuthCookies(accessToken: string, role: string) {
+  const cookieStore = await cookies();
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  cookieStore.set('accessToken', accessToken, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 15, // 15 minutos
+  });
+
+  cookieStore.set('userRole', role, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7, // 7 dias
+  });
+}
+
+export async function loginAction(formData: FormData): Promise<FieldActionResult> {
+  const parsed = LoginSchema.safeParse({
+    email: formData.get('email'),
+    password: formData.get('password'),
+  });
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+      fields: {
+        email: (formData.get('email') as string) ?? '',
+      },
+    };
+  }
+
+  try {
+    const { accessToken, user } = await loginUser(parsed.data.email, parsed.data.password);
+    await setAuthCookies(accessToken, user.role);
+  } catch (err) {
+    if (isVoxaApiError(err)) {
+      return {
+        success: false,
+        error: { _form: [err.message] },
+        fields: {
+          email: (formData.get('email') as string) ?? '',
+        },
+      };
+    }
+    return {
+      success: false,
+      error: { _form: ['Erro inesperado. Tente novamente.'] },
+      fields: {
+        email: (formData.get('email') as string) ?? '',
+      },
+    };
+  }
+
+  redirect('/dashboard');
+}
+
+export async function registerAction(formData: FormData): Promise<FieldActionResult> {
+  const parsed = RegisterSchema.safeParse({
+    name: formData.get('name'),
+    email: formData.get('email'),
+    password: formData.get('password'),
+  });
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+      fields: {
+        name: (formData.get('name') as string) ?? '',
+        email: (formData.get('email') as string) ?? '',
+      },
+    };
+  }
+
+  try {
+    const { accessToken, user } = await registerUser(
+      parsed.data.name,
+      parsed.data.email,
+      parsed.data.password,
+    );
+    await setAuthCookies(accessToken, user.role);
+  } catch (err) {
+    if (isVoxaApiError(err)) {
+      return {
+        success: false,
+        error: { _form: [err.message] },
+        fields: {
+          name: (formData.get('name') as string) ?? '',
+          email: (formData.get('email') as string) ?? '',
+        },
+      };
+    }
+    return {
+      success: false,
+      error: { _form: ['Erro inesperado. Tente novamente.'] },
+      fields: {
+        name: (formData.get('name') as string) ?? '',
+        email: (formData.get('email') as string) ?? '',
+      },
+    };
+  }
+
+  redirect('/dashboard');
+}
+
+export async function logoutAction(): Promise<void> {
+  try {
+    await logoutUser();
+  } catch {
+    // ignora erros — limpar cookies de qualquer forma
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.delete('accessToken');
+  cookieStore.delete('userRole');
+
+  redirect('/login');
+}
