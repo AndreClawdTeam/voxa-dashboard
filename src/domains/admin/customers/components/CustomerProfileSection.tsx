@@ -1,5 +1,4 @@
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatFullDate } from '@/lib/format-date';
 import type { AdminCustomerDetail } from '../schemas';
 import { CustomerStatusBadge } from './CustomerStatusBadge';
 
@@ -34,9 +33,7 @@ export function CustomerProfileSection({ customer }: Props) {
       </div>
       <div className="flex justify-between">
         <span className="text-muted-foreground">Membro desde</span>
-        <span>
-          {format(new Date(customer.createdAt), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-        </span>
+        <span>{formatFullDate(customer.createdAt)}</span>
       </div>
     </div>
   );
