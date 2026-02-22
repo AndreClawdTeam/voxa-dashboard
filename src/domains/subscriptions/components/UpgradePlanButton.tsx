@@ -15,14 +15,11 @@ import {
 import { Button } from '@/components/ui/button';
 import type { UpgradeState } from '../actions';
 import { upgradeSubscriptionAction } from '../actions';
-
-const PLAN_LABELS: Record<string, string> = {
-  basic: 'Basic',
-  pro: 'Pro',
-};
+import { PLAN_LABELS } from '../constants';
+import type { UpgradeTier } from '../schemas';
 
 interface Props {
-  tier: 'basic' | 'pro';
+  tier: UpgradeTier;
   disabled?: boolean;
   label: string;
 }
@@ -31,11 +28,13 @@ export function UpgradePlanButton({ tier, disabled, label }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
 
   const [state, formAction, isPending] = useActionState<UpgradeState, FormData>(
-    upgradeSubscriptionAction,
+    async (_prevState: UpgradeState, formData: FormData): Promise<UpgradeState> => {
+      return await upgradeSubscriptionAction(formData);
+    },
     null,
   );
 
-  const planLabel = PLAN_LABELS[tier];
+  const planLabel = PLAN_LABELS[tier] ?? tier;
 
   if (disabled) {
     return (

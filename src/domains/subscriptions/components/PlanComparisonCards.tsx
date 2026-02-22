@@ -1,15 +1,13 @@
-import { PLAN_FEATURES } from '../helpers';
-import type { Subscription } from '../schemas';
+import { PLAN_FEATURES, PLAN_ORDER } from '../constants';
+import type { Subscription, UpgradeTier } from '../schemas';
 import { UpgradePlanButton } from './UpgradePlanButton';
 
 interface Props {
   subscription: Subscription;
 }
 
-const PLAN_ORDER = ['trial', 'basic', 'pro'] as const;
-
 export function PlanComparisonCards({ subscription }: Props) {
-  const currentTierIndex = PLAN_ORDER.indexOf(subscription.tier as (typeof PLAN_ORDER)[number]);
+  const currentTierIndex = PLAN_ORDER.indexOf(subscription.tier);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -46,7 +44,7 @@ export function PlanComparisonCards({ subscription }: Props) {
             </ul>
             {tier !== 'trial' && (
               <UpgradePlanButton
-                tier={tier as 'basic' | 'pro'}
+                tier={tier as UpgradeTier}
                 disabled={!isUpgrade}
                 label={
                   isCurrent ? 'Plano atual' : isUpgrade ? 'Fazer upgrade' : 'Downgrade indisponível'

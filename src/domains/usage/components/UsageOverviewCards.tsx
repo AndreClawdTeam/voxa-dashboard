@@ -1,6 +1,7 @@
 import { Clock, Mic, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatAudioDuration, TIER_RATE_LIMITS } from '@/domains/subscriptions/helpers';
+import { TIER_LABELS, TIER_RATE_LIMITS } from '@/domains/subscriptions/constants';
+import { formatAudioDuration } from '@/domains/subscriptions/helpers';
 import type { Subscription } from '@/domains/subscriptions/schemas';
 import { formatDate } from '@/lib/format-date';
 import type { Usage } from '../schemas';
@@ -12,6 +13,7 @@ interface Props {
 
 export function UsageOverviewCards({ usage, subscription }: Props) {
   const rateLimit = TIER_RATE_LIMITS[subscription.tier] ?? 20;
+  const tierLabel = TIER_LABELS[subscription.tier] ?? subscription.tier;
 
   const cards = [
     {
@@ -29,7 +31,7 @@ export function UsageOverviewCards({ usage, subscription }: Props) {
     {
       title: 'Rate limit',
       value: `${rateLimit} req/min`,
-      subtitle: `Plano ${subscription.tier.charAt(0).toUpperCase() + subscription.tier.slice(1)}`,
+      subtitle: `Plano ${tierLabel}`,
       icon: Zap,
     },
   ];

@@ -1,4 +1,6 @@
 import { formatDate } from '@/lib/format-date';
+import { STATUS_LABELS } from './constants';
+import type { SubscriptionStatus } from './schemas';
 
 export function getTrialDaysRemaining(trialEndsAt: string | null): number {
   if (!trialEndsAt) return 0;
@@ -20,52 +22,13 @@ export function formatAudioDuration(totalSeconds: number): string {
   return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}min` : `${hours}h`;
 }
 
-export const TIER_LABELS: Record<string, string> = {
-  trial: 'Trial',
-  basic: 'Basic',
-  pro: 'Pro',
-};
-
-export const TIER_RATE_LIMITS: Record<string, number> = {
-  trial: 20,
-  basic: 60,
-  pro: 300,
-};
-
 export function getSubscriptionStatusLabel(status: string): string {
-  const labels: Record<string, string> = {
-    trial: 'Trial',
-    active: 'Ativa',
-    suspended: 'Suspensa',
-    cancelled: 'Cancelada',
-  };
-  return labels[status] ?? status;
+  return (STATUS_LABELS as Record<string, string>)[status] ?? status;
 }
 
 export function formatPeriod(start: string, end: string): string {
   return `${formatDate(start)} → ${formatDate(end)}`;
 }
 
-export const PLAN_FEATURES: Record<
-  string,
-  { label: string; rateLimit: string; features: string[]; price: string }
-> = {
-  trial: {
-    label: 'Trial',
-    rateLimit: '20 req/min',
-    price: 'Grátis',
-    features: ['20 requisições/minuto', '7 dias de acesso', 'Todas as funcionalidades'],
-  },
-  basic: {
-    label: 'Basic',
-    rateLimit: '60 req/min',
-    price: 'R$ 49/mês',
-    features: ['60 requisições/minuto', 'Suporte por e-mail', 'Histórico ilimitado'],
-  },
-  pro: {
-    label: 'Pro',
-    rateLimit: '300 req/min',
-    price: 'R$ 149/mês',
-    features: ['300 requisições/minuto', 'Suporte prioritário', 'Histórico ilimitado', 'SLA 99.9%'],
-  },
-};
+// Re-export SubscriptionStatus type for consumers that use it via helpers
+export type { SubscriptionStatus };

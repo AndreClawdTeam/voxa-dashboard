@@ -2,11 +2,8 @@ import type { Metadata } from 'next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlanComparisonCards } from '@/domains/subscriptions/components/PlanComparisonCards';
 import { TrialCountdown } from '@/domains/subscriptions/components/TrialCountdown';
-import {
-  formatPeriod,
-  getSubscriptionStatusLabel,
-  TIER_LABELS,
-} from '@/domains/subscriptions/helpers';
+import { TIER_LABELS } from '@/domains/subscriptions/constants';
+import { formatPeriod, getSubscriptionStatusLabel } from '@/domains/subscriptions/helpers';
 import { getCurrentSubscription } from '@/domains/subscriptions/service';
 
 export const dynamic = 'force-dynamic';
