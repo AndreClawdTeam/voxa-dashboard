@@ -20,13 +20,30 @@ vi.mock('@/lib/services', () => ({
 import { voxaGet, voxaPost } from '@/lib/services';
 import { getCurrentUser, loginUser, logoutUser, registerUser } from './service';
 
-const mockUser = {
+// A real JWT with payload { role: 'customer', userId: '123' }
+// Encoded: header.payload.signature (only payload matters for decoding)
+const MOCK_TOKEN =
+  'eyJhbGciOiJIUzI1NiJ9.' +
+  Buffer.from(
+    JSON.stringify({ userId: '123e4567-e89b-12d3-a456-426614174000', role: 'customer' }),
+  ).toString('base64url') +
+  '.signature';
+
+const mockRegisterUser = {
   id: '123e4567-e89b-12d3-a456-426614174000',
   email: 'user@example.com',
   name: 'João Silva',
   role: 'customer' as const,
-  isActive: true,
   createdAt: '2024-01-01T00:00:00.000Z',
+};
+
+const mockUserProfile = {
+  id: '123e4567-e89b-12d3-a456-426614174000',
+  email: 'user@example.com',
+  name: 'João Silva',
+  role: 'customer' as const,
+  createdAt: '2024-01-01T00:00:00.000Z',
+  subscription: null,
 };
 
 describe('loginUser', () => {
@@ -34,11 +51,10 @@ describe('loginUser', () => {
     vi.clearAllMocks();
   });
 
-  it('deve retornar accessToken e user no sucesso', async () => {
+  it('deve retornar accessToken e user.role decodificado do JWT', async () => {
     const mockResponse = {
       data: {
-        accessToken: 'token-abc-123',
-        user: mockUser,
+        accessToken: MOCK_TOKEN,
       },
     };
     vi.mocked(voxaPost).mockResolvedValue(mockResponse);
@@ -50,8 +66,16 @@ describe('loginUser', () => {
       { email: 'user@example.com', password: 'password123' },
       expect.anything(),
     );
-    expect(result.accessToken).toBe('token-abc-123');
-    expect(result.user).toEqual(mockUser);
+    expect(result.accessToken).toBe(MOCK_TOKEN);
+    expect(result.user.role).toBe('customer');
+  });
+
+  it('deve usar role "customer" como fallback se JWT inválido', async () => {
+    const mockResponse = { data: { accessToken: 'not.a.valid.jwt' } };
+    vi.mocked(voxaPost).mockResolvedValue(mockResponse);
+
+    const result = await loginUser('user@example.com', 'password123');
+    expect(result.user.role).toBe('customer');
   });
 
   it('deve propagar erro da API', async () => {
@@ -71,7 +95,7 @@ describe('registerUser', () => {
     const mockResponse = {
       data: {
         accessToken: 'new-token-xyz',
-        user: mockUser,
+        user: mockRegisterUser,
       },
     };
     vi.mocked(voxaPost).mockResolvedValue(mockResponse);
@@ -84,7 +108,7 @@ describe('registerUser', () => {
       expect.anything(),
     );
     expect(result.accessToken).toBe('new-token-xyz');
-    expect(result.user).toEqual(mockUser);
+    expect(result.user).toEqual(mockRegisterUser);
   });
 
   it('deve propagar erro da API', async () => {
@@ -124,14 +148,14 @@ describe('getCurrentUser', () => {
     vi.clearAllMocks();
   });
 
-  it('deve retornar o usuário autenticado', async () => {
-    const mockResponse = { data: mockUser };
+  it('deve retornar o perfil completo do usuário via /dashboard/profile', async () => {
+    const mockResponse = { data: mockUserProfile };
     vi.mocked(voxaGet).mockResolvedValue(mockResponse);
 
     const user = await getCurrentUser();
 
-    expect(voxaGet).toHaveBeenCalledWith('/api/v1/auth/me', expect.anything());
-    expect(user).toEqual(mockUser);
+    expect(voxaGet).toHaveBeenCalledWith('/api/v1/dashboard/profile', expect.anything());
+    expect(user).toEqual(mockUserProfile);
   });
 
   it('deve propagar erro da API', async () => {

@@ -52,6 +52,12 @@ export async function loginAction(formData: FormData): Promise<FieldActionResult
     await setAuthCookies(accessToken, user.role);
   } catch (err) {
     if (isVoxaApiError(err)) {
+      console.error('[loginAction] API error', {
+        endpoint: '/api/v1/auth/login',
+        status: err.statusCode,
+        code: err.code,
+        message: err.message,
+      });
       return {
         success: false,
         error: { _form: [err.message] },
@@ -60,6 +66,10 @@ export async function loginAction(formData: FormData): Promise<FieldActionResult
         },
       };
     }
+    console.error('[loginAction] Unexpected error', {
+      type: err instanceof Error ? err.constructor.name : typeof err,
+      message: err instanceof Error ? err.message : String(err),
+    });
     return {
       success: false,
       error: { _form: ['Erro inesperado. Tente novamente.'] },
@@ -99,6 +109,12 @@ export async function registerAction(formData: FormData): Promise<FieldActionRes
     await setAuthCookies(accessToken, user.role);
   } catch (err) {
     if (isVoxaApiError(err)) {
+      console.error('[registerAction] API error', {
+        endpoint: '/api/v1/auth/register',
+        status: err.statusCode,
+        code: err.code,
+        message: err.message,
+      });
       return {
         success: false,
         error: { _form: [err.message] },
@@ -108,6 +124,10 @@ export async function registerAction(formData: FormData): Promise<FieldActionRes
         },
       };
     }
+    console.error('[registerAction] Unexpected error', {
+      type: err instanceof Error ? err.constructor.name : typeof err,
+      message: err instanceof Error ? err.message : String(err),
+    });
     return {
       success: false,
       error: { _form: ['Erro inesperado. Tente novamente.'] },
