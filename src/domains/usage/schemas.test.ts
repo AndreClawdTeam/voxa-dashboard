@@ -3,13 +3,12 @@ import { UsageSchema } from './schemas';
 
 const validUsage = {
   data: {
-    transcriptionsCount: 42,
-    totalAudioDurationSeconds: 3600,
-    totalProcessingTimeMs: 120000,
-    period: {
-      start: '2026-02-01T00:00:00Z',
-      end: '2026-02-28T23:59:59Z',
-    },
+    totalTranscriptions: 100,
+    totalMinutes: 50,
+    monthTranscriptions: 42,
+    monthMinutes: 20,
+    tier: 'basic',
+    status: 'active',
   },
 };
 
@@ -18,45 +17,44 @@ describe('UsageSchema', () => {
     const result = UsageSchema.safeParse(validUsage);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.data.transcriptionsCount).toBe(42);
-      expect(result.data.data.totalAudioDurationSeconds).toBe(3600);
+      expect(result.data.data.monthTranscriptions).toBe(42);
+      expect(result.data.data.totalTranscriptions).toBe(100);
+      expect(result.data.data.monthMinutes).toBe(20);
+      expect(result.data.data.totalMinutes).toBe(50);
     }
   });
 
-  it('deve validar com transcriptionsCount = 0', () => {
+  it('deve validar com tier e status nulos', () => {
     const result = UsageSchema.safeParse({
-      data: { ...validUsage.data, transcriptionsCount: 0 },
+      data: { ...validUsage.data, tier: null, status: null },
     });
     expect(result.success).toBe(true);
   });
 
-  it('deve falhar quando transcriptionsCount é negativo', () => {
+  it('deve validar com monthTranscriptions = 0', () => {
     const result = UsageSchema.safeParse({
-      data: { ...validUsage.data, transcriptionsCount: -1 },
+      data: { ...validUsage.data, monthTranscriptions: 0 },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('deve falhar quando monthTranscriptions é negativo', () => {
+    const result = UsageSchema.safeParse({
+      data: { ...validUsage.data, monthTranscriptions: -1 },
     });
     expect(result.success).toBe(false);
   });
 
-  it('deve falhar quando transcriptionsCount não é inteiro', () => {
+  it('deve falhar quando monthTranscriptions não é inteiro', () => {
     const result = UsageSchema.safeParse({
-      data: { ...validUsage.data, transcriptionsCount: 1.5 },
+      data: { ...validUsage.data, monthTranscriptions: 1.5 },
     });
     expect(result.success).toBe(false);
   });
 
-  it('deve falhar quando totalAudioDurationSeconds é negativo', () => {
+  it('deve falhar quando totalMinutes é negativo', () => {
     const result = UsageSchema.safeParse({
-      data: { ...validUsage.data, totalAudioDurationSeconds: -10 },
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it('deve falhar quando period.start está ausente', () => {
-    const result = UsageSchema.safeParse({
-      data: {
-        ...validUsage.data,
-        period: { end: validUsage.data.period.end },
-      },
+      data: { ...validUsage.data, totalMinutes: -10 },
     });
     expect(result.success).toBe(false);
   });
@@ -66,10 +64,16 @@ describe('UsageSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('deve falhar quando transcriptionsCount é string', () => {
+  it('deve falhar quando monthTranscriptions é string', () => {
     const result = UsageSchema.safeParse({
-      data: { ...validUsage.data, transcriptionsCount: '42' },
+      data: { ...validUsage.data, monthTranscriptions: '42' },
     });
+    expect(result.success).toBe(false);
+  });
+
+  it('deve falhar quando totalTranscriptions está ausente', () => {
+    const { totalTranscriptions: _, ...rest } = validUsage.data;
+    const result = UsageSchema.safeParse({ data: rest });
     expect(result.success).toBe(false);
   });
 });

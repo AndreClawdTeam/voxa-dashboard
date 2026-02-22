@@ -4,7 +4,7 @@ import type { Subscription } from './schemas';
 import { SubscriptionSchema, UpgradeResponseSchema } from './schemas';
 
 export async function getCurrentSubscription(): Promise<Subscription> {
-  const result = await voxaGet('/api/v1/subscriptions/current', SubscriptionSchema);
+  const result = await voxaGet('/api/v1/subscriptions/me', SubscriptionSchema);
   return result.data;
 }
 

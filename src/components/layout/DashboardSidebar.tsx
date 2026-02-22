@@ -1,3 +1,5 @@
+'use client';
+
 import { CreditCard, FileText, Key, LayoutDashboard, User } from 'lucide-react';
 import { DashboardNavButton } from './DashboardNavButton';
 

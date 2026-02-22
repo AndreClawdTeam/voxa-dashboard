@@ -1,3 +1,5 @@
+'use client';
+
 import { ScrollText, Users } from 'lucide-react';
 import Link from 'next/link';
 import { AdminNavButton } from './AdminNavButton';

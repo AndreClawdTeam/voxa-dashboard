@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TIER_LABELS, TIER_RATE_LIMITS } from '@/domains/subscriptions/constants';
 import { formatAudioDuration } from '@/domains/subscriptions/helpers';
 import type { Subscription } from '@/domains/subscriptions/schemas';
-import { formatDate } from '@/lib/format-date';
 import type { Usage } from '../schemas';
 
 interface Props {
@@ -18,14 +17,14 @@ export function UsageOverviewCards({ usage, subscription }: Props) {
   const cards = [
     {
       title: 'Transcrições este mês',
-      value: usage.transcriptionsCount.toString(),
-      subtitle: `Período: ${formatDate(usage.period.start)}`,
+      value: usage.monthTranscriptions.toString(),
+      subtitle: `Total geral: ${usage.totalTranscriptions} transcrições`,
       icon: Mic,
     },
     {
-      title: 'Áudio processado',
-      value: formatAudioDuration(usage.totalAudioDurationSeconds),
-      subtitle: `${Math.round(usage.totalProcessingTimeMs / 1000)}s tempo total`,
+      title: 'Áudio processado este mês',
+      value: formatAudioDuration(usage.monthMinutes * 60),
+      subtitle: `Total geral: ${formatAudioDuration(usage.totalMinutes * 60)}`,
       icon: Clock,
     },
     {

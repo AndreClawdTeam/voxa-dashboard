@@ -2,13 +2,12 @@ import { z } from 'zod';
 
 export const UsageSchema = z.object({
   data: z.object({
-    transcriptionsCount: z.number().int().nonnegative(),
-    totalAudioDurationSeconds: z.number().nonnegative(),
-    totalProcessingTimeMs: z.number().nonnegative(),
-    period: z.object({
-      start: z.string(),
-      end: z.string(),
-    }),
+    totalTranscriptions: z.number().int().nonnegative(),
+    totalMinutes: z.number().nonnegative(),
+    monthTranscriptions: z.number().int().nonnegative(),
+    monthMinutes: z.number().nonnegative(),
+    tier: z.string().nullable(),
+    status: z.string().nullable(),
   }),
 });
 
