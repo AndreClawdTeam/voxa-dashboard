@@ -2,7 +2,7 @@ import { getCurrentUser } from '@/domains/auth/service';
 import { SubscriptionCard } from '@/domains/subscriptions/components/SubscriptionCard';
 import { TrialCountdownBanner } from '@/domains/subscriptions/components/TrialCountdownBanner';
 import { getTrialDaysRemaining, isTrialExpiringSoon } from '@/domains/subscriptions/helpers';
-import { getCurrentSubscription } from '@/domains/subscriptions/service';
+import { getCurrentSubscriptionSafe } from '@/domains/subscriptions/service';
 import { UsageOverviewCards } from '@/domains/usage/components/UsageOverviewCards';
 import { getMonthlyUsage } from '@/domains/usage/service';
 
@@ -13,13 +13,17 @@ export default async function DashboardPage() {
   // Busca paralela de dados no servidor
   const [usage, subscription, user] = await Promise.all([
     getMonthlyUsage(),
-    getCurrentSubscription(),
+    getCurrentSubscriptionSafe(),
     getCurrentUser(),
   ]);
 
   const showTrialBanner =
-    subscription.status === 'trial' && isTrialExpiringSoon(subscription.trialEndsAt);
-  const trialDaysRemaining = getTrialDaysRemaining(subscription.trialEndsAt);
+    subscription?.status === 'trial' &&
+    subscription.trialEndsAt !== null &&
+    isTrialExpiringSoon(subscription.trialEndsAt);
+
+  const trialDaysRemaining =
+    subscription?.trialEndsAt != null ? getTrialDaysRemaining(subscription.trialEndsAt) : 0;
 
   return (
     <div className="space-y-6">

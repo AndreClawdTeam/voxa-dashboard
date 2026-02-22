@@ -21,8 +21,7 @@ export function middleware(request: NextRequest) {
 
   // Logado tentando acessar rota pública → redirecionar para dashboard
   if (PUBLIC_PATHS.includes(pathname) && accessToken) {
-    const dest = userRole === 'admin' ? '/admin/customers' : '/dashboard';
-    return NextResponse.redirect(new URL(dest, request.url));
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
   // /dashboard/* → requer autenticação
