@@ -141,7 +141,7 @@ export async function registerAction(formData: FormData): Promise<FieldActionRes
   redirect('/dashboard');
 }
 
-export async function logoutAction(): Promise<void> {
+export async function logoutAction(_formData?: FormData): Promise<void> {
   try {
     await logoutUser();
   } catch {
@@ -151,6 +151,7 @@ export async function logoutAction(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete('accessToken');
   cookieStore.delete('userRole');
+  cookieStore.delete('refreshToken');
 
   redirect('/login');
 }
