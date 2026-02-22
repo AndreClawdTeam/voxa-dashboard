@@ -25,5 +25,5 @@ export async function listAuditLogs(
   if (startDate) query.set('startDate', startDate);
   if (endDate) query.set('endDate', endDate);
 
-  return voxaGet(`/api/v1/admin/audit-logs?${query.toString()}`, AuditLogListResponseSchema);
+  return voxaGet(`/api/v1/admin/audit-log?${query.toString()}`, AuditLogListResponseSchema);
 }
