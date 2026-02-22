@@ -1,8 +1,8 @@
 import 'server-only';
 import { voxaGet } from '@/lib/services';
 import type { Pagination } from '@/lib/zod';
-import type { Transcription, TranscriptionListItem } from './schemas';
-import { TranscriptionDetailResponseSchema, TranscriptionListResponseSchema } from './schemas';
+import type { Transcription } from './schemas';
+import { TranscriptionListResponseSchema } from './schemas';
 
 export async function listTranscriptions({
   page = 1,
@@ -10,7 +10,7 @@ export async function listTranscriptions({
 }: {
   page?: number;
   limit?: number;
-} = {}): Promise<{ data: TranscriptionListItem[]; pagination: Pagination }> {
+} = {}): Promise<{ data: Transcription[]; pagination: Pagination }> {
   const result = await voxaGet(
     `/api/v1/dashboard/transcriptions?page=${page}&limit=${limit}`,
     TranscriptionListResponseSchema,
@@ -18,10 +18,6 @@ export async function listTranscriptions({
   return result;
 }
 
-export async function getTranscription(id: string): Promise<Transcription> {
-  const result = await voxaGet(
-    `/api/v1/dashboard/transcriptions/${id}`,
-    TranscriptionDetailResponseSchema,
-  );
-  return result.data;
-}
+// NOTE: There is no per-transcription detail endpoint in the API
+// (GET /dashboard/transcriptions/:id does not exist).
+// The list endpoint returns full transcription data for all items.

@@ -8,6 +8,7 @@ export const UsageSchema = z.object({
     monthMinutes: z.number().nonnegative(),
     tier: z.string().nullable(),
     status: z.string().nullable(),
+    trialEndsAt: z.string().nullable().optional(),
   }),
 });
 

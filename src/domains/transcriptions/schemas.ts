@@ -7,12 +7,15 @@ export const TranscriptionStatusSchema = z.enum(['pending', 'processing', 'compl
 
 export type TranscriptionStatus = z.infer<typeof TranscriptionStatusSchema>;
 
-// ─── Entidade completa (endpoint de detalhe) ──────────────────────────────────
+// ─── Entidade completa ────────────────────────────────────────────────────────
+// The list endpoint (GET /dashboard/transcriptions) returns full transcription
+// entities from the database — all fields below are present in the list response.
+// NOTE: There is no per-transcription detail endpoint in the API.
 
 export const TranscriptionSchema = z.object({
   id: z.string(),
   status: TranscriptionStatusSchema,
-  audioFilename: z.string(),
+  audioFilename: z.string().nullable(),
   audioSizeBytes: z.number().int().nonnegative().nullable(),
   audioDurationSeconds: z.number().nonnegative().nullable(),
   audioFormat: z.string().nullable(),
@@ -27,27 +30,15 @@ export const TranscriptionSchema = z.object({
 
 export type Transcription = z.infer<typeof TranscriptionSchema>;
 
-// ─── Item de lista (endpoint paginado) ───────────────────────────────────────
-
-export const TranscriptionListItemSchema = z.object({
-  id: z.string(),
-  status: TranscriptionStatusSchema,
-  audioFilename: z.string(),
-  audioDurationSeconds: z.number().nonnegative().nullable(),
-  detectedLanguage: z.string().nullable(),
-  createdAt: z.string(),
-});
-
-export type TranscriptionListItem = z.infer<typeof TranscriptionListItemSchema>;
+// ─── Alias para compatibilidade ───────────────────────────────────────────────
+// TranscriptionListItem is the same as Transcription: the list endpoint returns
+// all fields. Kept as a type alias to avoid breaking existing component imports.
+export type TranscriptionListItem = Transcription;
 
 // ─── Schemas de resposta da API ───────────────────────────────────────────────
 
-export const TranscriptionDetailResponseSchema = z.object({
-  data: TranscriptionSchema,
-});
-
 export const TranscriptionListResponseSchema = z.object({
-  data: z.array(TranscriptionListItemSchema),
+  data: z.array(TranscriptionSchema),
   pagination: PaginationSchema,
 });
 
