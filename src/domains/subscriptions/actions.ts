@@ -11,10 +11,7 @@ export type UpgradeState =
   | { success: false; error: string }
   | null;
 
-export async function upgradeSubscriptionAction(
-  _prevState: UpgradeState,
-  formData: FormData,
-): Promise<UpgradeState> {
+export async function upgradeSubscriptionAction(formData: FormData): Promise<UpgradeState> {
   // requireAuth() redireciona para /login se não autenticado
   await requireAuth();
 

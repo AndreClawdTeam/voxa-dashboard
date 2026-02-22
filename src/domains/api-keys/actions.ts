@@ -57,12 +57,12 @@ export async function createApiKeyAction(formData: FormData): Promise<CreateApiK
   }
 }
 
-export async function revokeApiKeyAction(id: string): Promise<RevokeApiKeyResult> {
+export async function revokeApiKeyAction(formData: FormData): Promise<RevokeApiKeyResult> {
   // requireAuth() redireciona para /login se não autenticado
   await requireAuth();
 
   // Validar formato do ID
-  const parsed = RevokeApiKeySchema.safeParse({ id });
+  const parsed = RevokeApiKeySchema.safeParse({ id: formData.get('id') });
   if (!parsed.success) {
     return { success: false, error: 'ID de API key inválido.' };
   }

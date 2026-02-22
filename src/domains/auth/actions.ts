@@ -31,10 +31,7 @@ async function setAuthCookies(accessToken: string, role: string) {
   });
 }
 
-export async function loginAction(
-  _prevState: FieldActionResult | null,
-  formData: FormData,
-): Promise<FieldActionResult> {
+export async function loginAction(formData: FormData): Promise<FieldActionResult> {
   const parsed = LoginSchema.safeParse({
     email: formData.get('email'),
     password: formData.get('password'),
@@ -75,10 +72,7 @@ export async function loginAction(
   redirect('/dashboard');
 }
 
-export async function registerAction(
-  _prevState: FieldActionResult | null,
-  formData: FormData,
-): Promise<FieldActionResult> {
+export async function registerAction(formData: FormData): Promise<FieldActionResult> {
   const parsed = RegisterSchema.safeParse({
     name: formData.get('name'),
     email: formData.get('email'),

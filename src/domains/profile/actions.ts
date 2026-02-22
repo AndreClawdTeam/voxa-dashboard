@@ -12,10 +12,7 @@ export type UpdateProfileState =
   | { success: false; error: Record<string, string[]>; fields?: Record<string, string> }
   | null;
 
-export async function updateProfileAction(
-  _prevState: UpdateProfileState,
-  formData: FormData,
-): Promise<UpdateProfileState> {
+export async function updateProfileAction(formData: FormData): Promise<UpdateProfileState> {
   const name = (formData.get('name') as string) ?? '';
   const email = (formData.get('email') as string) ?? '';
 

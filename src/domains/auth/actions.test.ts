@@ -50,7 +50,7 @@ describe('loginAction', () => {
 
   it('deve retornar erro de validação para email inválido', async () => {
     const formData = makeFormData({ email: 'invalid', password: 'secret' });
-    const result = await loginAction(null, formData);
+    const result = await loginAction(formData);
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -61,7 +61,7 @@ describe('loginAction', () => {
 
   it('deve retornar erro de validação para senha vazia', async () => {
     const formData = makeFormData({ email: 'user@example.com', password: '' });
-    const result = await loginAction(null, formData);
+    const result = await loginAction(formData);
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -74,7 +74,7 @@ describe('loginAction', () => {
     vi.mocked(loginUser).mockResolvedValue({ accessToken: 'token-abc', user: mockUser });
 
     const formData = makeFormData({ email: 'user@example.com', password: 'secret123' });
-    await loginAction(null, formData);
+    await loginAction(formData);
 
     expect(loginUser).toHaveBeenCalledWith('user@example.com', 'secret123');
     expect(redirect).toHaveBeenCalledWith('/dashboard');
@@ -85,7 +85,7 @@ describe('loginAction', () => {
     vi.mocked(loginUser).mockRejectedValue(apiError);
 
     const formData = makeFormData({ email: 'user@example.com', password: 'wrong' });
-    const result = await loginAction(null, formData);
+    const result = await loginAction(formData);
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -98,7 +98,7 @@ describe('loginAction', () => {
     vi.mocked(loginUser).mockRejectedValue(new Error('Network error'));
 
     const formData = makeFormData({ email: 'user@example.com', password: 'secret123' });
-    const result = await loginAction(null, formData);
+    const result = await loginAction(formData);
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -118,7 +118,7 @@ describe('registerAction', () => {
       email: 'joao@example.com',
       password: 'senha123',
     });
-    const result = await registerAction(null, formData);
+    const result = await registerAction(formData);
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -133,7 +133,7 @@ describe('registerAction', () => {
       email: 'joao@example.com',
       password: '1234',
     });
-    const result = await registerAction(null, formData);
+    const result = await registerAction(formData);
 
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -150,7 +150,7 @@ describe('registerAction', () => {
       email: 'joao@example.com',
       password: 'senha123',
     });
-    await registerAction(null, formData);
+    await registerAction(formData);
 
     expect(registerUser).toHaveBeenCalledWith('João Silva', 'joao@example.com', 'senha123');
     expect(redirect).toHaveBeenCalledWith('/dashboard');
@@ -165,7 +165,7 @@ describe('registerAction', () => {
       email: 'used@example.com',
       password: 'senha123',
     });
-    const result = await registerAction(null, formData);
+    const result = await registerAction(formData);
 
     expect(result.success).toBe(false);
     if (!result.success) {

@@ -13,8 +13,6 @@ export type UpdateSubscriptionState = ActionResult<string> | null;
 const CustomerIdSchema = z.string().uuid('ID de cliente inválido');
 
 export async function updateSubscriptionAction(
-  customerId: string,
-  _prevState: UpdateSubscriptionState,
   formData: FormData,
 ): Promise<UpdateSubscriptionState> {
   // ✅ CRÍTICO: verificar autenticação + role admin ANTES de qualquer operação.
@@ -22,6 +20,7 @@ export async function updateSubscriptionAction(
   // bypassando o middleware e o AdminLayout.
   await requireAdmin();
 
+  const customerId = formData.get('customerId') as string | null;
   const idParsed = CustomerIdSchema.safeParse(customerId);
   if (!idParsed.success) {
     return { success: false, error: 'ID de cliente inválido.' };
