@@ -207,20 +207,18 @@ Não é um produto separado. É a camada de UI sobre a Voxa API. Toda lógica de
 
 | Tecnologia | Versão | Justificativa |
 |-----------|--------|--------------|
-| **Next.js** | 15.x (App Router) | Framework principal; App Router com Server Components, Server Actions e middleware nativo. RSC reduz bundle JS no cliente. |
+| **Next.js** | 16.x (App Router) | Framework principal; App Router com Server Components, Server Actions e middleware nativo. RSC reduz bundle JS no cliente. |
 | **TypeScript** | 5.x strict | `strict: true`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`. Zero `any`, zero type assertions. |
 | **React** | 19.x | `useActionState`, `useFormStatus`, `use()` hook para Promises. |
-| **Zod** | 3.x | Validação runtime + inferência de tipos. Schema = source of truth. Nunca `as Type`. |
+| **Zod** | 4.x | Validação runtime + inferência de tipos. Schema = source of truth. Nunca `as Type`. |
 | **shadcn/ui** | latest | Componentes acessíveis, copiáveis, tema dark. Baseado em Radix UI + Tailwind CSS. Funciona como Server Components (Card, Table, Badge) e Client (Dialog, Sheet, DropdownMenu). |
-| **Tailwind CSS** | 3.x | Utility-first; integrado ao shadcn/ui. |
-| **Biome** | 1.x | Linter + formatter em um binário Rust. 10-100x mais rápido que ESLint+Prettier. Zero config duplicada. |
-| **Vitest** | 2.x | Test runner ESM-native, API compatível com Jest, integração nativa com Vite/Next.js. |
+| **Tailwind CSS** | 4.x | Utility-first; integrado ao shadcn/ui. |
+| **Biome** | 2.x | Linter + formatter em um binário Rust. 10-100x mais rápido que ESLint+Prettier. Zero config duplicada. |
+| **Vitest** | 4.x | Test runner ESM-native, API compatível com Jest, integração nativa com Vite/Next.js. |
 | **React Testing Library** | latest | Testa comportamento, não implementação. `getByRole`, `userEvent`. |
-| **react-hook-form** | 7.x | Gerenciamento de estado de formulários no cliente. Integra com Zod via `@hookform/resolvers`. Usado em forms complexos com validação client-side progressiva. |
-| **MSW (Mock Service Worker)** | 2.x | Mocks de API para testes de integração. Intercepta fetch no nível do service worker. |
+| **sonner** | 2.x | Toast notifications. Chamado dentro do wrapper do `useActionState`, nunca em `useEffect`. |
 
-### Por que não Next.js 16?
-O CTO especificou "Next.js 16", mas esta versão não existe ainda (a mais recente estável é Next.js 15.x, com Next.js 14.x em produção). Adotaremos **Next.js 15** (versão atual mais moderna), que inclui todas as features descritas (App Router, Server Actions estáveis, `useActionState`, `next/form`). Atualizaremos para 16 quando lançado — a arquitetura proposta é compatível.
+> ⚠️ **Sem react-hook-form, sem MSW.** Formulários usam `useActionState` + `<form action={action}>` (padrão React 19 nativo). Testes de actions usam `vi.mock` do Vitest — não há intercepção de fetch em nível de service worker.
 
 ---
 
@@ -408,219 +406,418 @@ voxa-dashboard/
 
 ## Seção 5 — Padrões de Código
 
-> **Decisão de arquitetura:** Server Components por default. Client Components apenas quando necessário.
-> Regra de ouro: se não precisa de `useState`, `useEffect`, `onClick` → é Server Component.
+> **Atenção: esta seção foi reescrita com exemplos extraídos do código real implementado.**
+> Qualquer padrão aqui é prescritivo. PRs que desviem serão recusados.
 
-### 5.1 Server Components vs Client Components
+---
+
+### 5.1 — Server Components vs Client Components
+
+**Regra:** Server Component é o padrão. Adicione `'use client'` SOMENTE se o componente precisar de `useState`, `useEffect`, `usePathname`, `useActionState` ou handlers de evento interativos.
+
+#### ✅ Server Component — sem diretiva, async, busca dados diretamente
 
 ```tsx
-// ✅ Server Component (default) — busca dados diretamente, zero JS no cliente
-// src/app/dashboard/api-keys/page.tsx
-import { fetchApiKeys } from '@/domains/api-keys/service';
-import { ApiKeysTable } from '@/domains/api-keys/components/ApiKeysTable';
-import { ApiKeysPageClient } from '@/domains/api-keys/components/ApiKeysPageClient';
+// src/app/dashboard/api-keys/page.tsx — Server Component real do codebase
+import { ApiKeyTable } from '@/domains/api-keys/components/ApiKeyTable';
+import { CreateApiKeyDialog } from '@/domains/api-keys/components/CreateApiKeyDialog';
+import { listApiKeys } from '@/domains/api-keys/service';
+
+export const dynamic = 'force-dynamic';
 
 export default async function ApiKeysPage() {
-  // Sem useState, sem useEffect — roda no servidor
-  const keys = await fetchApiKeys();
+  // Chamada direta ao service — sem fetch no componente, sem useEffect
+  const keys = await listApiKeys();
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">API Keys</h1>
-        {/* Client Component — precisa de estado para o modal */}
-        <ApiKeysPageClient />
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-foreground">API Keys</h1>
+        <CreateApiKeyDialog /> {/* Client Component embutido num Server Component — ok */}
       </div>
-      {/* Server Component — renderiza a tabela sem JS */}
-      <ApiKeysTable keys={keys} />
+      <ApiKeyTable keys={keys} /> {/* Server Component que renderiza a tabela */}
     </div>
   );
 }
+```
 
-// ✅ Client Component — APENAS para interatividade
-// src/domains/api-keys/components/ApiKeysPageClient.tsx
-'use client';
-import { useState } from 'react';
-import { CreateApiKeyDialog } from './CreateApiKeyDialog';
+```tsx
+// src/components/layout/DashboardSidebar.tsx — sidebar sem 'use client'
+// Não precisa de interatividade: apenas renderiza links
+import { DashboardNavButton } from './DashboardNavButton';
 
-export function ApiKeysPageClient() {
-  const [open, setOpen] = useState(false);
-  const [newKey, setNewKey] = useState<string | null>(null);
+const navItems = [
+  { href: '/dashboard', label: 'Overview', icon: LayoutDashboard, exactMatch: true },
+  { href: '/dashboard/api-keys', label: 'API Keys', icon: Key },
+  // ...
+];
 
+export function DashboardSidebar() {
   return (
-    <>
-      <Button onClick={() => setOpen(true)}>+ Nova API Key</Button>
-      <CreateApiKeyDialog
-        open={open}
-        onOpenChange={setOpen}
-        onKeyCreated={setNewKey}
-      />
-      {/* RawTokenReveal: exibe token UMA VEZ, depois some */}
-    </>
+    <aside className="w-56 border-r border-border bg-card flex flex-col">
+      {navItems.map((item) => (
+        <DashboardNavButton key={item.href} {...item} />
+      ))}
+    </aside>
   );
-}
-
-// ❌ Errado — Client Component desnecessário
-'use client'; // ← remove isso se não usa hooks
-export function StaticCard({ title }: { title: string }) {
-  return <Card>{title}</Card>; // poderia ser Server Component
 }
 ```
 
-### 5.2 Server Actions
-
-> **Padrão:** Server Actions recebem FormData ou objetos tipados, validam com Zod, chamam service, retornam resultado tipado.
-> Não usar Route Handlers (`app/api/`) — Server Actions são mais seguras e eliminam surface de ataque.
+#### ✅ Client Component — com `'use client'`, precisa de hook do browser
 
 ```tsx
-// src/domains/api-keys/actions.ts
+// src/components/layout/DashboardNavButton.tsx — tem 'use client' por causa do usePathname
+'use client';
+import { usePathname } from 'next/navigation';
+
+export function DashboardNavButton({ href, label, icon: Icon, exactMatch }: Props) {
+  const pathname = usePathname();
+  const isActive = exactMatch ? pathname === href : pathname.startsWith(href);
+  // ... renderiza link com estilo ativo/inativo
+}
+```
+
+#### ❌ Errado — Client Component desnecessário
+
+```tsx
+'use client'; // ← REMOVA se o componente não usa hooks nem eventos
+export function ProfileHeader({ name }: { name: string }) {
+  return <h1>{name}</h1>; // poderia e deve ser Server Component
+}
+```
+
+#### Referência rápida
+
+| É Server Component | É Client Component (`'use client'`) |
+|---|---|
+| `app/dashboard/*/page.tsx` | `CreateApiKeyDialog.tsx` — `useState`, `useActionState` |
+| `app/dashboard/layout.tsx` | `RevokeApiKeyButton.tsx` — `useActionState`, `useRef` |
+| `DashboardSidebar.tsx` | `DashboardNavButton.tsx` — `usePathname` |
+| `AdminSidebar.tsx` | `ProfileForm.tsx` — `useActionState` |
+| `ApiKeyTable.tsx` | `LoginForm.tsx` — `useActionState` |
+| `ProfileHeader.tsx` | `ActionButton.tsx` — `useActionState` |
+
+---
+
+### 5.2 — Service Layer (`service.ts`)
+
+**Regra:** Todo `fetch` à Voxa API passa pelo HTTP client centralizado. Services são a única camada que chama `voxaGet`, `voxaPost`, `voxaPatch`, `voxaDelete`.
+
+#### Estrutura obrigatória
+
+```typescript
+// src/domains/api-keys/service.ts — exemplo real
+import 'server-only'; // ← OBRIGATÓRIO. Garante que este módulo nunca vai para o cliente.
+import { voxaDelete, voxaGet, voxaPost } from '@/lib/services';
+import type { ApiKey, CreateApiKeyResponse } from './schemas';
+import {
+  ApiKeyListResponseSchema,
+  CreateApiKeyResponseSchema,
+  DeleteApiKeyResponseSchema,
+} from './schemas';
+
+export async function listApiKeys(): Promise<ApiKey[]> {
+  const result = await voxaGet('/api/v1/keys', ApiKeyListResponseSchema);
+  return result.data;
+}
+
+export async function createApiKey(label: string): Promise<CreateApiKeyResponse> {
+  const result = await voxaPost('/api/v1/keys', { label }, CreateApiKeyResponseSchema);
+  return result.data;
+}
+
+export async function revokeApiKey(id: string): Promise<void> {
+  await voxaDelete(`/api/v1/keys/${id}`, DeleteApiKeyResponseSchema);
+}
+```
+
+#### Helpers disponíveis em `@/lib/services`
+
+```typescript
+// src/lib/services/http-client.ts — assinaturas dos helpers
+
+// GET — lê token do cookie, valida resposta com schema Zod
+voxaGet<T>(endpoint: string, schema: ZodSchema<T>, tags?: string[]): Promise<T>
+
+// POST — envia body JSON
+voxaPost<T>(endpoint: string, body: unknown, schema: ZodSchema<T>): Promise<T>
+
+// PUT — substitui recurso
+voxaPut<T>(endpoint: string, body: unknown, schema: ZodSchema<T>): Promise<T>
+
+// PATCH — atualização parcial
+voxaPatch<T>(endpoint: string, body: unknown, schema: ZodSchema<T>): Promise<T>
+
+// DELETE — remove recurso
+voxaDelete<T>(endpoint: string, schema: ZodSchema<T>): Promise<T>
+```
+
+#### Erros retornados pelos services
+
+Services não retornam erros — lançam exceções tipadas:
+
+```typescript
+// src/lib/services/errors.ts
+VoxaApiError     // Erro da API (4xx, 5xx). Tem .message, .code, .statusCode, .details
+VoxaNetworkError // Falha de conexão (ECONNREFUSED, timeout, etc.)
+
+// Type guards para uso em actions.ts:
+isVoxaApiError(err)     // true se for VoxaApiError
+isVoxaNetworkError(err) // true se for VoxaNetworkError
+```
+
+#### Caso especial: `fetch` direto — auth diferente ou multipart
+
+Quando a chamada usa autenticação **diferente da sessão** (ex: API Key do próprio usuário) ou **multipart FormData** (que o voxaFetch não suporta), `fetch` direto é permitido — mas **somente dentro de `actions.ts`**:
+
+```typescript
+// src/domains/transcriptions/actions.ts — fetch direto (caso especial real)
+// Por quê: auth é Bearer com a API Key do usuário (não cookie de sessão),
+// e o body é multipart (FormData) — voxaFetch envia apenas JSON.
+export async function transcribeAudioAction(formData: FormData): Promise<TranscribeResult> {
+  await requireAuth();
+  const audioFile = formData.get('audio');
+  const apiKey = formData.get('apiKey');
+  // ...validação...
+
+  const apiFormData = new FormData();
+  apiFormData.append('audio', audioFile as File);
+
+  const response = await fetch(`${env.NEXT_PUBLIC_VOXA_API_URL}/api/v1/transcribe`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}` }, // API Key do usuário, não sessão
+    body: apiFormData, // multipart — não JSON
+  });
+  // ...parse manual da resposta...
+}
+```
+
+#### Regras absolutas
+
+| ✅ Permitido | ❌ Proibido |
+|---|---|
+| `voxaGet/Post/Patch/Delete` em `service.ts` | `fetch()` em qualquer `service.ts` |
+| `fetch` direto em `actions.ts` quando auth/body são diferentes | `fetch()` em componentes |
+| Service lança `VoxaApiError`/`VoxaNetworkError` | `fetch()` direto em `page.tsx` ou `layout.tsx` |
+
+---
+
+### 5.3 — Server Actions (`actions.ts`)
+
+**Regra:** Actions validam input com Zod, delegam ao service, e retornam resultado tipado. Sem lógica de negócio, sem `fetch` (exceto caso especial documentado em 5.2).
+
+#### Assinatura correta
+
+```typescript
+// src/domains/api-keys/actions.ts — padrão real
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
+import { requireAuth } from '@/lib/auth/require-auth';
+import { isVoxaApiError } from '@/lib/services';
+import { CreateApiKeyInputSchema } from './schemas';
 import { createApiKey } from './service';
-import { CreateApiKeySchema } from './schemas';
 
-// Tipo de retorno explícito — facilita useActionState no cliente
+// Tipo de retorno explícito — facilita inferência no cliente
 type CreateApiKeyResult =
-  | { success: true; data: { rawToken: string; id: string } }
-  | { success: false; error: Record<string, string[]> };
+  | { success: true; rawToken: string; key: ApiKey }
+  | { success: false; error: string };
 
-export async function createApiKeyAction(
-  _prevState: CreateApiKeyResult | null,
-  formData: FormData
-): Promise<CreateApiKeyResult> {
-  const parsed = CreateApiKeySchema.safeParse({
+// ✅ Assinatura: apenas formData — SEM _prevState na server action
+export async function createApiKeyAction(formData: FormData): Promise<CreateApiKeyResult> {
+  await requireAuth(); // redireciona para /login se não autenticado
+
+  const parsed = CreateApiKeyInputSchema.safeParse({
     label: formData.get('label'),
   });
 
   if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.flatten().fieldErrors,
-    };
+    const errorMsg = parsed.error.flatten().fieldErrors.label?.[0] ?? 'Dados inválidos.';
+    return { success: false, error: errorMsg };
   }
 
   try {
-    const result = await createApiKey(parsed.data);
-    revalidatePath('/dashboard/api-keys');
-    return { success: true, data: result };
+    const result = await createApiKey(parsed.data.label);
+    revalidatePath('/dashboard/api-keys'); // invalida cache após mutação
+    return { success: true, rawToken: result.rawToken, key: { ...result } };
   } catch (err) {
     if (isVoxaApiError(err)) {
-      return { success: false, error: { _form: [err.message] } };
+      return { success: false, error: err.message };
     }
-    return { success: false, error: { _form: ['Erro inesperado. Tente novamente.'] } };
+    return { success: false, error: 'Erro inesperado. Tente novamente.' };
   }
 }
+```
 
-// No Client Component — usar useActionState (React 19)
+#### Onde fica o `_prevState`?
+
+O `_prevState` **não existe na server action**. Ele é parte do wrapper no `useActionState` do cliente:
+
+```typescript
+// ✅ CORRETO — _prevState fica no wrapper cliente
+const [state, action, isPending] = useActionState(
+  async (_prevState: CreateState, formData: FormData): Promise<CreateState> => {
+    const result = await createApiKeyAction(formData); // action recebe só formData
+    return result.success ? { success: true, rawToken: result.rawToken } : result;
+  },
+  null,
+);
+
+// ❌ ERRADO — nunca adicionar _prevState na server action
+export async function createApiKeyAction(
+  _prevState: CreateApiKeyResult | null, // ← REMOVER
+  formData: FormData,
+): Promise<CreateApiKeyResult> { ... }
+```
+
+#### Tipos de retorno padronizados
+
+Para actions sem dados de retorno (ex: revogar, logout):
+```typescript
+type RevokeApiKeyResult = { success: true } | { success: false; error: string };
+```
+
+Para actions com dados de retorno:
+```typescript
+type CreateApiKeyResult =
+  | { success: true; rawToken: string; key: ApiKey }
+  | { success: false; error: string };
+```
+
+Para actions com field-level errors (formulários com múltiplos campos):
+```typescript
+// Via src/lib/actions.ts
+type UpdateProfileState =
+  | { success: true; data: UserProfile }
+  | { success: false; error: Record<string, string[]>; fields?: Record<string, string> }
+  | null;
+```
+
+#### Regras absolutas
+
+| ✅ Obrigatório | ❌ Proibido |
+|---|---|
+| `'use server'` no topo do arquivo | `fetch()` direto (exceto caso especial de 5.2) |
+| `await requireAuth()` em toda action protegida | Lógica de negócio (cálculos, transformações) |
+| `safeParse` → retornar erro de validação | `throw` de erro sem capturar |
+| Chamar service correspondente | Formatar ou transformar resposta da API |
+| `revalidatePath()` após mutação bem-sucedida | `_prevState` na assinatura da action |
+| Capturar `isVoxaApiError` / genérico | `as Type` em dados da API |
+
+---
+
+### 5.4 — Formulários e Dialogs (`'use client'`)
+
+**Regra:** Todos os formulários usam `useActionState` + `<form action={action}>`. Nenhum `onSubmit + e.preventDefault()`. Nenhum `useState` para campos.
+
+#### Padrão canônico — formulário simples
+
+```tsx
+// src/domains/auth/components/LoginForm.tsx — exemplo real
 'use client';
+
 import { useActionState } from 'react';
 import { toast } from 'sonner';
-import { createApiKeyAction } from '../actions';
+import { FormField } from '@/components/shared/FormField';
+import { Button } from '@/components/ui/button';
+import { loginAction } from '../actions';
 
-export function CreateApiKeyForm() {
+export function LoginForm() {
   const [state, action, isPending] = useActionState(
-    async (prevState: CreateApiKeyResult | null, formData: FormData) => {
-      const result = await createApiKeyAction(prevState, formData);
-      // ✅ Efeitos colaterais (toast, redirect) aqui — NÃO em useEffect
-      if (result.success) {
-        toast.success('API key criada com sucesso!');
-      } else if (result.error?._form) {
+    async (_prevState: FieldActionResult | null, formData: FormData) => {
+      const result = await loginAction(formData);
+
+      // ✅ Efeitos colaterais AQUI, dentro do wrapper — nunca em useEffect
+      if (!result.success && result.error._form) {
         toast.error(result.error._form[0]);
       }
+
       return result;
     },
     null,
   );
 
   return (
-    <form action={action}>
-      <Input name="label" placeholder="Ex: Production App" />
-      {state?.error?.label && (
-        <p className="text-destructive text-sm">{state.error.label[0]}</p>
-      )}
+    <form action={action} className="flex flex-col gap-4">
+      <FormField
+        name="email"
+        label="Email"
+        type="email"
+        // defaultValue preserva valor digitado sem useState
+        defaultValue={state?.success === false ? (state.fields?.email ?? '') : ''}
+        errors={state?.success === false ? state.error : null}
+      />
+      <FormField
+        name="password"
+        label="Senha"
+        type="password"
+        errors={state?.success === false ? state.error : null}
+      />
       <Button type="submit" disabled={isPending}>
-        {isPending ? 'Criando...' : 'Criar API Key'}
+        {isPending ? 'Entrando...' : 'Entrar'}
       </Button>
     </form>
   );
 }
 ```
 
-### 5.2.1 Efeitos pós-action — toast, redirect (sem `useEffect`)
-
-> ❌ **Proibido:** `useEffect` para reagir ao resultado de uma Server Action.
-> ✅ **Obrigatório:** Envolver a Server Action em uma função cliente dentro do `useActionState`.
-
-O `useActionState` aceita qualquer função `async` — não apenas Server Actions diretamente. Use isso para **colocar os efeitos colaterais (toast, redirect, analytics) dentro do wrapper**, mantendo a Server Action pura.
+#### Padrão com dialog — useActionState controla estado do modal
 
 ```tsx
-// ❌ ERRADO — nunca faça isso
-const [state, action] = useActionState(revokeApiKeyAction, null);
-
-useEffect(() => {
-  if (state?.success) {
-    toast.success('Key revogada!'); // useEffect para reagir a state → proibido
-  }
-}, [state]);
-
-// ✅ CORRETO — efeito dentro do wrapper da action
-const [state, action, isPending] = useActionState(
-  async (prevState: RevokeApiKeyResult | null, formData: FormData) => {
-    const result = await revokeApiKeyAction(prevState, formData); // Server Action
-    // Efeitos acontecem aqui, no cliente, após a server action retornar
-    if (result.success) {
-      toast.success('API key revogada com sucesso.');
-    } else {
-      toast.error(result.error?._form?.[0] ?? 'Erro ao revogar key.');
-    }
-    return result;
-  },
-  null,
-);
-```
-
-**Por quê?**
-- `useEffect` é assíncrono em relação ao render — cria race conditions e duplas execuções em Strict Mode
-- O wrapper no `useActionState` é síncrono em relação ao fluxo da action — o toast dispara exatamente quando a action completa, antes do próximo render
-- Mantém toda a lógica de "o que fazer após a action" colocada junto à action, não espalhada no componente
-
----
-
-### 5.2.2 `ActionButton` — componente genérico para Server Actions simples
-
-Para ações que **não precisam de formulário visível** (revogar, suspender, ativar, cancelar), crie um `<form>` com inputs hidden e um botão. Em vez de duplicar esse padrão em cada feature, use o componente genérico `ActionButton`.
-
-```tsx
-// src/components/shared/ActionButton.tsx
+// src/domains/api-keys/components/CreateApiKeyDialog.tsx — exemplo real
 'use client';
 
+import { useActionState, useState } from 'react';
+
+type CreateState = null | { success: true; rawToken: string } | { success: false; error: string };
+
+export function CreateApiKeyDialog() {
+  const [open, setOpen] = useState(false); // useState só para abrir/fechar dialog
+
+  const [state, action, isPending] = useActionState(
+    async (_prevState: CreateState, formData: FormData): Promise<CreateState> => {
+      const result = await createApiKeyAction(formData);
+      // sem toast aqui — o dialog muda de step automaticamente via state.success
+      return result.success ? { success: true, rawToken: result.rawToken } : result;
+    },
+    null,
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      {state?.success ? (
+        <RawTokenRevealStep rawToken={state.rawToken} onClose={() => setOpen(false)} />
+      ) : (
+        <form action={action}> {/* ← <form action={action}>, não onSubmit */}
+          <Input name="label" required />
+          {state?.success === false && (
+            <p className="text-destructive text-sm">{state.error}</p>
+          )}
+          <Button type="submit" disabled={isPending}>
+            {isPending ? 'Criando...' : 'Criar API Key'}
+          </Button>
+        </form>
+      )}
+    </Dialog>
+  );
+}
+```
+
+#### ActionButton — para ações de 1 clique sem campos visíveis
+
+```tsx
+// src/components/shared/ActionButton.tsx — implementação real
+'use client';
 import { useActionState } from 'react';
 import { Button } from '@/components/ui/button';
-import type { ComponentProps } from 'react';
 
-type ActionFn = (
-  prevState: unknown,
-  formData: FormData,
-) => Promise<unknown>;
+type ActionFn = (formData: FormData) => Promise<unknown>;
 
-interface ActionButtonProps extends ComponentProps<typeof Button> {
-  /** Server Action a ser chamada no submit */
-  action: ActionFn;
-  /** Campos a serem enviados como inputs hidden: { chave: valor } */
-  data?: Record<string, string>;
-  children?: React.ReactNode;
-}
-
-export function ActionButton({
-  action,
-  data = {},
-  children,
-  disabled,
-  ...buttonProps
-}: ActionButtonProps) {
-  const [, formAction, isPending] = useActionState(action, null);
+export function ActionButton({ action, data = {}, children, disabled, ...buttonProps }) {
+  const [, formAction, isPending] = useActionState(
+    async (_prevState: unknown, formData: FormData) => await action(formData),
+    null,
+  );
 
   return (
     <form action={formAction}>
@@ -633,418 +830,283 @@ export function ActionButton({
     </form>
   );
 }
-```
 
-**Uso:**
-
-```tsx
-// Revogar API Key — sem form manual, sem estado local
-<ActionButton
-  action={revokeApiKeyAction}
-  data={{ id: apiKey.id }}
-  variant="destructive"
-  size="sm"
->
+// Uso real — sem form manual, sem estado local:
+<ActionButton action={revokeApiKeyAction} data={{ id: key.id }} variant="destructive">
   Revogar
 </ActionButton>
-
-// Admin: suspender cliente
-<ActionButton
-  action={suspendCustomerAction}
-  data={{ userId: customer.id }}
-  variant="outline"
->
-  Suspender conta
-</ActionButton>
-
-// Admin: ativar assinatura
-<ActionButton
-  action={activateSubscriptionAction}
-  data={{ userId: customer.id, tier: 'basic' }}
->
-  Ativar plano Basic
-</ActionButton>
 ```
 
-**Quando usar `ActionButton` vs `useActionState` manual:**
+#### `FormField` — componente compartilhado para inputs com label e erros
+
+```tsx
+// src/components/shared/FormField.tsx — Server Component (sem 'use client')
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+interface FormFieldProps extends ComponentProps<typeof Input> {
+  name: string;
+  label: string;
+  errors?: Record<string, string[]> | null;
+}
+
+export function FormField({ name, label, errors, ...inputProps }: FormFieldProps) {
+  const fieldErrors = errors?.[name];
+  return (
+    <div className="space-y-1">
+      <Label htmlFor={`field-${name}`}>{label}</Label>
+      <Input id={`field-${name}`} name={name} aria-invalid={!!fieldErrors} {...inputProps} />
+      {fieldErrors && <p className="text-sm text-destructive">{fieldErrors[0]}</p>}
+    </div>
+  );
+}
+```
+
+#### Quando usar cada padrão
 
 | Situação | Padrão |
 |---|---|
-| Ação com campos visíveis (label, email, etc.) | `useActionState` manual no componente |
-| Ação de 1 clique com dados já disponíveis | `ActionButton` com `data={}` |
-| Ação que precisa de toast/redirect customizado | Wrapper no `useActionState` (seção 5.2.1) |
-| `ActionButton` com toast | Combine: crie wrapper com toast e passe para `ActionButton` |
+| Form com campos visíveis (label, email, etc.) | `useActionState` + `<form action={action}>` |
+| Dialog com form interno | `useActionState` + `<form action={action}>` dentro do dialog |
+| Ação de 1 clique (revogar, suspender, ativar) | `<ActionButton action={fn} data={{ id }}>` |
+| Toast/redirect após action | Dentro do wrapper do `useActionState` — nunca em `useEffect` |
+
+#### Regras absolutas
+
+| ✅ Obrigatório | ❌ Proibido |
+|---|---|
+| `useActionState` + `<form action={action}>` | `onSubmit + e.preventDefault()` |
+| `defaultValue` com `state.fields` para preservar input | `useState` para valor de campo de formulário |
+| Toast/redirect no wrapper do `useActionState` | `useEffect` para reagir a resultado de action |
+| `FormField` para inputs com label e erros | Campo de formulário sem acessibilidade (sem `id`/`htmlFor`) |
 
 ---
 
-### 5.3 HTTP Client Centralizado
+### 5.5 — Schemas Zod (`schemas.ts`)
 
-> **Lei:** `fetch()` JAMAIS pode aparecer fora de `src/lib/services/http-client.ts`.
-> O CI verifica isso com grep. PRs com fetch direto são bloqueados automaticamente.
+**Regra:** Schema Zod é a fonte de verdade. Tipos TypeScript são derivados com `z.infer<>`. Sem interfaces manuais para entidades que já têm schema.
 
-```typescript
-// src/lib/services/http-client.ts
-import { z } from 'zod';
-import { env } from '@/lib/env';
-import { VoxaApiError } from './errors';
-import { parseApiResponse } from './response';
-import { getAccessToken, setAccessToken, clearTokens } from '@/lib/auth/tokens';
-
-type VoxaFetchOptions<T> = RequestInit & {
-  schema: z.ZodSchema<T>;
-};
-
-let isRefreshing = false;
-
-export async function voxaFetch<T>(
-  endpoint: string,
-  { schema, ...options }: VoxaFetchOptions<T>
-): Promise<T> {
-  const accessToken = getAccessToken();
-
-  const response = await fetch(`${env.NEXT_PUBLIC_VOXA_API_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      ...options.headers,
-    },
-  });
-
-  // Retry automático no 401 (token expirado)
-  if (response.status === 401 && !isRefreshing) {
-    isRefreshing = true;
-    try {
-      const refreshResponse = await fetch(
-        `${env.NEXT_PUBLIC_VOXA_API_URL}/api/v1/auth/refresh`,
-        { method: 'POST', credentials: 'include' }
-      );
-
-      if (!refreshResponse.ok) {
-        clearTokens();
-        throw new VoxaApiError('Sessão expirada. Faça login novamente.', 'UNAUTHORIZED');
-      }
-
-      const { data } = await refreshResponse.json();
-      setAccessToken(data.accessToken);
-      isRefreshing = false;
-
-      // Retry com novo token
-      return voxaFetch(endpoint, { schema, ...options });
-    } catch {
-      isRefreshing = false;
-      clearTokens();
-      throw new VoxaApiError('Sessão expirada.', 'UNAUTHORIZED');
-    }
-  }
-
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    throw new VoxaApiError(
-      errorBody.error ?? 'Erro na API',
-      errorBody.code ?? 'API_ERROR',
-      errorBody.details
-    );
-  }
-
-  return parseApiResponse(await response.json(), schema);
-}
-```
-
-### 5.4 Middleware de Proteção de Rotas
-
-> **Abordagem:** Cookie-based auth no middleware (sem next-auth).
-> Por quê: A Voxa API gerencia os tokens — não queremos duplicar essa lógica com next-auth.
-> O middleware lê cookies `accessToken` e `userRole` para decisões rápidas na edge.
+#### Estrutura padrão de um arquivo `schemas.ts`
 
 ```typescript
-// src/middleware.ts
-import { NextRequest, NextResponse } from 'next/server';
-
-const PUBLIC_PATHS = ['/', '/login', '/register'];
-
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Ignora arquivos estáticos e rotas de API internas
-  if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon') ||
-    pathname.includes('.')
-  ) {
-    return NextResponse.next();
-  }
-
-  const accessToken = request.cookies.get('accessToken')?.value;
-  const userRole = request.cookies.get('userRole')?.value;
-
-  // Rotas públicas — redireciona para dashboard se já logado
-  if (PUBLIC_PATHS.includes(pathname) && accessToken) {
-    const redirect = userRole === 'admin' ? '/admin/customers' : '/dashboard';
-    return NextResponse.redirect(new URL(redirect, request.url));
-  }
-
-  // /dashboard/* — requer autenticação
-  if (pathname.startsWith('/dashboard')) {
-    if (!accessToken) {
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-  }
-
-  // /admin/* — requer autenticação + role admin
-  if (pathname.startsWith('/admin')) {
-    if (!accessToken) {
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-    if (userRole !== 'admin') {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    }
-  }
-
-  return NextResponse.next();
-}
-
-export const config = {
-  matcher: [
-    /*
-     * Match all request paths EXCEPT:
-     * - _next/static (static files)
-     * - _next/image (image optimization)
-     * - favicon.ico
-     * - public files
-     */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
-};
-```
-
-### 5.5 Zod — Validação e Tipos (Nunca Type Assertion)
-
-```typescript
-// src/domains/api-keys/schemas.ts
+// src/domains/api-keys/schemas.ts — exemplo real
 import { z } from 'zod';
 
-// Schema = source of truth para tipos e validação
+// ─── 1. Schema da entidade (o que a API retorna) ──────────────────────────────
 export const ApiKeySchema = z.object({
   id: z.string().uuid(),
-  label: z.string().min(1).max(100),
-  prefix: z.string(),         // "vxa_..." (primeiros chars)
-  createdAt: z.string().datetime(),
-  lastUsedAt: z.string().datetime().nullable(),
-  isActive: z.boolean(),
+  label: z.string(),
+  isRevoked: z.boolean(),
+  lastUsedAt: z.string().nullable(),
+  createdAt: z.string(),
 });
 
-export const ApiKeyListSchema = z.array(ApiKeySchema);
-
-export const CreateApiKeySchema = z.object({
+// ─── 2. Schemas de input (validação de forms) ─────────────────────────────────
+export const CreateApiKeyInputSchema = z.object({
   label: z.string().min(1, 'Label obrigatório').max(100, 'Máximo 100 caracteres'),
 });
 
-// CRÍTICO: rawToken apenas na criação — não existe em listagens
-export const CreateApiKeyResultSchema = z.object({
-  id: z.string().uuid(),
-  label: z.string(),
-  rawToken: z.string(),       // vxa_xxxx — exibir UMA VEZ, não armazenar
-  prefix: z.string(),
-  createdAt: z.string().datetime(),
+// ─── 3. Schemas de resposta da API (envelope data:) ───────────────────────────
+export const ApiKeyListResponseSchema = z.object({
+  data: z.array(ApiKeySchema),
 });
 
-// Tipos derivados dos schemas — nunca definir interface separada para isso
+export const CreateApiKeyResponseSchema = z.object({
+  data: ApiKeySchema.extend({
+    rawToken: z.string(), // incluso apenas na criação
+  }),
+});
+
+// Schema para DELETE que pode retornar {} ou { message: "ok" }
+export const DeleteApiKeyResponseSchema = z.object({}).passthrough();
+
+// ─── 4. Tipos derivados (NUNCA interface manual) ──────────────────────────────
 export type ApiKey = z.infer<typeof ApiKeySchema>;
-export type CreateApiKeyInput = z.infer<typeof CreateApiKeySchema>;
-export type CreateApiKeyResult = z.infer<typeof CreateApiKeyResultSchema>;
-
-// ✅ Type guard sem 'as'
-export function isApiKey(value: unknown): value is ApiKey {
-  return ApiKeySchema.safeParse(value).success;
-}
-
-// ❌ NUNCA FAZER ISSO
-// const key = response.data as ApiKey;
-// const key = response.data as unknown as ApiKey;
+export type CreateApiKeyInput = z.infer<typeof CreateApiKeyInputSchema>;
+export type CreateApiKeyResponse = z.infer<typeof CreateApiKeyResponseSchema>['data'];
 ```
 
-### 5.6 React Context para Auth
-
-> **Regra:** Context só existe em `'use client'`. Server Components NUNCA acessam Context.
-> Server Components buscam dados diretamente nos services.
-> Context é para compartilhar estado entre Client Components na árvore.
-
-```tsx
-// src/domains/auth/context.tsx
-'use client';
-
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
-import type { User } from './types';
-
-interface AuthContextValue {
-  user: User | null;
-  accessToken: string | null;
-  setAuth: (user: User, token: string) => void;
-  clearAuth: () => void;
-  isAdmin: () => boolean;
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null);
-
-export function AuthProvider({
-  children,
-  initialUser = null,
-  initialToken = null,
-}: {
-  children: ReactNode;
-  initialUser?: User | null;
-  initialToken?: string | null;
-}) {
-  const [user, setUser] = useState<User | null>(initialUser);
-  const [accessToken, setAccessToken] = useState<string | null>(initialToken);
-
-  const setAuth = useCallback((user: User, token: string) => {
-    setUser(user);
-    setAccessToken(token);
-  }, []);
-
-  const clearAuth = useCallback(() => {
-    setUser(null);
-    setAccessToken(null);
-  }, []);
-
-  const isAdmin = useCallback(() => user?.role === 'admin', [user]);
-
-  return (
-    <AuthContext.Provider value={{ user, accessToken, setAuth, clearAuth, isAdmin }}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
-
-// Hook tipado — lança erro se usado fora do Provider
-export function useAuth(): AuthContextValue {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth deve ser usado dentro de <AuthProvider>');
-  }
-  return context;
-}
-```
-
-### 5.7 Validação de Env com Zod
-
-> Falha no boot se variável obrigatória estiver ausente. Zero `process.env.X!` espalhado.
+#### Enums — usar `z.enum()` no schema, nunca `enum` TypeScript
 
 ```typescript
-// src/lib/env.ts
-import { z } from 'zod';
+// src/domains/subscriptions/schemas.ts — enums reais do codebase
+export const TierSchema = z.enum(['trial', 'basic', 'pro']);
+export const SubscriptionStatusSchema = z.enum(['active', 'trial', 'suspended', 'cancelled']);
+export const TranscriptionStatusSchema = z.enum(['pending', 'processing', 'completed', 'failed']);
 
-const EnvSchema = z.object({
-  NEXT_PUBLIC_VOXA_API_URL: z
-    .string()
-    .url('NEXT_PUBLIC_VOXA_API_URL deve ser uma URL válida'),
-  NEXT_PUBLIC_APP_URL: z
-    .string()
-    .url('NEXT_PUBLIC_APP_URL deve ser uma URL válida'),
-  NODE_ENV: z
-    .enum(['development', 'test', 'production'])
-    .default('development'),
-});
+// Tipo derivado do enum Zod:
+export type Tier = z.infer<typeof TierSchema>;
+// → type Tier = 'trial' | 'basic' | 'pro'
 
-// Valida no momento do import — falha com mensagem clara
-const parsed = EnvSchema.safeParse({
-  NEXT_PUBLIC_VOXA_API_URL: process.env.NEXT_PUBLIC_VOXA_API_URL,
-  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-  NODE_ENV: process.env.NODE_ENV,
-});
-
-if (!parsed.success) {
-  console.error('❌ Variáveis de ambiente inválidas:');
-  console.error(parsed.error.flatten().fieldErrors);
-  throw new Error('Configuração de ambiente inválida. Verifique .env.local');
-}
-
-export const env = parsed.data;
+// ❌ Nunca:
+enum Tier { trial = 'trial', basic = 'basic', pro = 'pro' } // TypeScript enum — proibido
 ```
 
-### 5.8 Padrões de Componentes shadcn/ui
+#### Constantes e labels — objeto `as const` em `constants.ts`
+
+Para labels de UI e mapeamentos, use objetos `as const` (não Zod — são constantes, não validação):
+
+```typescript
+// src/domains/subscriptions/constants.ts — padrão real
+import type { Tier, SubscriptionStatus } from './schemas';
+
+export const TIER_LABELS: Record<Tier, string> = {
+  trial: 'Trial',
+  basic: 'Basic',
+  pro: 'Pro',
+};
+
+export const STATUS_LABELS: Record<SubscriptionStatus, string> = {
+  trial: 'Trial',
+  active: 'Ativa',
+  suspended: 'Suspensa',
+  cancelled: 'Cancelada',
+};
+
+export const TIER_RATE_LIMITS: Record<Tier, number> = {
+  trial: 20,
+  basic: 60,
+  pro: 300,
+};
+```
+
+#### Regras absolutas
+
+| ✅ Obrigatório | ❌ Proibido |
+|---|---|
+| `z.enum([...])` para valores limitados validados pela API | `enum` TypeScript keyword |
+| `z.infer<typeof XyzSchema>` para tipos derivados | Interface TypeScript separada para entidade que tem schema |
+| Schema de resposta com envelope `data:` | `as Type` ou `as unknown as Type` |
+| `safeParse` em actions (retorna `{ success, error }`) | `parse()` com try/catch para validação de input |
+
+---
+
+### 5.6 — Componentes de Layout (Sidebar/Nav)
+
+**Regra:** Sidebars são Server Components. NavButtons têm `'use client'` por causa do `usePathname`. O layout (Server Component) faz o gate de auth antes de renderizar a sidebar.
+
+#### DashboardSidebar — Server Component puro
 
 ```tsx
-// ✅ shadcn/ui funciona como Server Component para renderização
-// src/domains/usage/components/UsageOverviewCards.tsx
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { fetchUsage } from '../service';
+// src/components/layout/DashboardSidebar.tsx — sem 'use client'
+import { DashboardNavButton } from './DashboardNavButton';
 
-export async function UsageOverviewCards() {
-  const usage = await fetchUsage();
+const navItems = [
+  { href: '/dashboard', label: 'Overview', icon: LayoutDashboard, exactMatch: true },
+  { href: '/dashboard/quickstart', label: 'Quickstart', icon: Zap },
+  { href: '/dashboard/api-keys', label: 'API Keys', icon: Key },
+  // ...
+];
+
+export function DashboardSidebar() {
+  return (
+    <aside className="w-56 border-r border-border bg-card flex flex-col">
+      <nav className="flex-1 p-2 flex flex-col gap-1">
+        {navItems.map((item) => (
+          <DashboardNavButton key={item.href} {...item} />
+        ))}
+      </nav>
+    </aside>
+  );
+}
+```
+
+#### DashboardNavButton — Client Component (apenas por causa do `usePathname`)
+
+```tsx
+// src/components/layout/DashboardNavButton.tsx
+'use client'; // necessário apenas para usePathname — estado ativo do link
+
+import { usePathname } from 'next/navigation';
+
+export function DashboardNavButton({ href, label, icon: Icon, exactMatch }: Props) {
+  const pathname = usePathname();
+  const isActive = exactMatch ? pathname === href : pathname.startsWith(`${href}/`) || pathname === href;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Transcrições este mês
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-3xl font-bold">{usage.transcriptionsThisMonth}</p>
-        </CardContent>
-      </Card>
-      {/* ... */}
+    <Link
+      href={href}
+      className={cn(isActive ? 'bg-accent text-foreground font-medium' : 'text-muted-foreground')}
+      aria-current={isActive ? 'page' : undefined}
+    >
+      <Icon size={16} />
+      {label}
+    </Link>
+  );
+}
+```
+
+#### Auth gate no layout — Server Component com `requireAuth`/`requireAdmin`
+
+```tsx
+// src/app/dashboard/layout.tsx — Server Component com gate de auth
+import 'server-only'; // garante que nunca vai para o cliente
+import { DashboardSidebar } from '@/components/layout/DashboardSidebar';
+import { requireAuth } from '@/lib/auth/require-auth';
+
+export default async function DashboardLayout({ children }: { children: ReactNode }) {
+  await requireAuth(); // redireciona para /login se não autenticado
+
+  return (
+    <div className="flex min-h-screen bg-background">
+      <DashboardSidebar />
+      <main className="flex-1 p-6 overflow-auto">{children}</main>
     </div>
   );
 }
 
-// ✅ Client Components para interatividade com shadcn
-// src/domains/api-keys/components/RevokeKeyButton.tsx
-'use client';
-import { useTransition } from 'react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-import { revokeApiKeyAction } from '../actions';
-
-export function RevokeKeyButton({ keyId, label }: { keyId: string; label: string }) {
-  const [isPending, startTransition] = useTransition();
-
-  const handleRevoke = () => {
-    startTransition(async () => {
-      await revokeApiKeyAction(keyId);
-    });
-  };
-
+// src/app/admin/layout.tsx — mesma estrutura com requireAdmin
+export default async function AdminLayout({ children }) {
+  await requireAdmin(); // redireciona para /login ou /dashboard se não admin
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button variant="destructive" size="sm">Revogar</Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Revogar "{label}"?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Esta ação é irreversível. Aplicações usando esta key deixarão de funcionar imediatamente.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <AlertDialogAction onClick={handleRevoke} disabled={isPending}>
-            {isPending ? 'Revogando...' : 'Revogar'}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <div className="flex h-screen bg-background">
+      <AdminSidebar />
+      <main className="flex-1 overflow-auto p-6">{children}</main>
+    </div>
   );
 }
+```
+
+#### `userRole` — não é prop, é lido do cookie pelo middleware e layouts
+
+O `userRole` não é passado como prop para a sidebar. O middleware (`middleware.ts`) lê o cookie `userRole` para decisões de redirect. O layout chama `requireAuth()`/`requireAdmin()` como segunda camada de proteção server-side. A sidebar exibe itens fixos — não tem lógica condicional por role.
+
+---
+
+### 5.7 — Checklist obrigatório antes de qualquer commit
+
+Execute todos os comandos abaixo. Zero erros/warnings em qualquer um:
+
+```bash
+cd /home/clawdbot/.openclaw/workspace/coding/voxa-dashboard
+
+# 1. Lint (Biome) — zero erros e warnings
+npm run lint
+
+# 2. Type check — zero erros TypeScript
+npm run type-check
+
+# 3. Build de produção — deve completar sem erros
+npm run build
+
+# 4. Testes — todos devem passar
+npm run test:run
+```
+
+Scripts disponíveis (`package.json`):
+
+```bash
+npm run dev          # next dev --port 3001
+npm run build        # next build
+npm run start        # next start --port 3001
+npm run lint         # biome check .
+npm run lint:fix     # biome check --write .
+npm run format       # biome format --write .
+npm run format:check # biome format --check .
+npm run type-check   # tsc --noEmit
+npm run test         # vitest (modo watch)
+npm run test:run     # vitest run (CI, sem watch)
+npm run test:coverage # vitest run --coverage
 ```
 
 ---
@@ -1206,19 +1268,19 @@ npm run dev
 npm run dev          # Next.js dev server em http://localhost:3001
 
 # Build e produção
-npm run build        # Build de produção (verifica tipos, otimiza)
-npm start            # Servidor de produção (após build)
+npm run build        # Build de produção
+npm run start        # Servidor de produção (após build) em http://localhost:3001
 
 # Qualidade de código
 npm run lint         # biome check . (linting)
+npm run lint:fix     # biome check --write . (auto-fix)
 npm run format       # biome format --write . (formatting)
-npm run lint:check   # biome check . --diagnostic-level=error (CI mode)
+npm run format:check # biome format --check . (CI mode)
 npm run type-check   # tsc --noEmit (zero erros de tipo)
 
 # Testes
-npm test             # Vitest em modo watch (desenvolvimento)
+npm run test         # Vitest em modo watch (desenvolvimento)
 npm run test:run     # Vitest run once (CI, sem watch)
-npm run test:ui      # Vitest com UI interativa
 npm run test:coverage # Coverage report
 ```
 
@@ -1753,50 +1815,23 @@ npm run test:coverage -- src/domains/api-keys
 > PR não pode ser mergeado com qualquer step falhando.
 
 ```bash
-#!/bin/bash
-# scripts/pr-check.sh — execute antes de abrir PR
+cd /home/clawdbot/.openclaw/workspace/coding/voxa-dashboard
 
-set -e  # Para se qualquer comando falhar
-
-echo "🔍 1/6 — Biome Lint..."
-npx biome check .
+echo "🔍 1/4 — Biome Lint..."
+npm run lint
 echo "✅ Lint: zero erros"
 
-echo "🎨 2/6 — Biome Format..."
-npx biome format --check .
-echo "✅ Format: zero diffs"
-
-echo "🔷 3/6 — TypeScript..."
-npx tsc --noEmit
+echo "🔷 2/4 — TypeScript..."
+npm run type-check
 echo "✅ Types: zero erros"
 
-echo "🏗️ 4/6 — Build..."
+echo "🏗️ 3/4 — Build..."
 npm run build
 echo "✅ Build: sucesso"
 
-echo "🧪 5/6 — Testes..."
+echo "🧪 4/4 — Testes..."
 npm run test:run
 echo "✅ Testes: todos passando"
-
-echo "🔎 6/6 — Verificando fetch direto fora de lib/services/..."
-DIRECT_FETCH=$(grep -r "fetch(" src \
-  --include="*.ts" \
-  --include="*.tsx" \
-  | grep -v "src/lib/services/" \
-  | grep -v "\.test\." \
-  | grep -v "\.spec\." \
-  | grep -v "node_modules" \
-  || true)
-
-if [ -n "$DIRECT_FETCH" ]; then
-  echo "❌ ERRO: fetch() direto encontrado fora de lib/services/:"
-  echo "$DIRECT_FETCH"
-  exit 1
-fi
-echo "✅ Zero fetch direto fora de lib/services/"
-
-echo ""
-echo "🚀 Todos os checks passaram! PR pronto para abrir."
 ```
 
 ### Checklist Manual Adicional
@@ -1805,11 +1840,14 @@ Antes de abrir o PR, revisar:
 
 - [ ] Nenhum `console.log` esquecido no código
 - [ ] Nenhuma `// TODO` crítica pendente
-- [ ] Componentes Client (`'use client'`) têm os mínimos de interatividade justificando o uso
+- [ ] Componentes Client (`'use client'`) têm motivo real para serem Client (hook, evento)
 - [ ] Toda resposta da API é validada com Zod (nunca `as Type`)
-- [ ] Server Actions retornam `{ success: true, data }` ou `{ success: false, error }`
-- [ ] **Nenhum `useEffect` para reagir a resultado de Server Action** — toasts e redirects ficam dentro do wrapper do `useActionState` (seção 5.2.1)
-- [ ] **Ações de 1 clique usam `<ActionButton>`** em vez de form/state manual (seção 5.2.2)
+- [ ] Server Actions retornam `{ success: true, ... }` ou `{ success: false, error: ... }`
+- [ ] **Server Actions têm apenas `formData: FormData` na assinatura** — sem `_prevState` (seção 5.3)
+- [ ] **Nenhum `useEffect` para reagir a resultado de Server Action** — toasts ficam dentro do wrapper do `useActionState` (seção 5.4)
+- [ ] **Ações de 1 clique usam `<ActionButton>`** em vez de form/state manual (seção 5.4)
+- [ ] `fetch()` direto só ocorre em `actions.ts` com auth/body diferente (seção 5.2)
+- [ ] `enum` TypeScript não foi usado — apenas `z.enum()` (seção 5.5)
 - [ ] Issues do GitHub atualizadas antes de fechar
 - [ ] Testes cobrem o caminho feliz E os casos de erro
 
