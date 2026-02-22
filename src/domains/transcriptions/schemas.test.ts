@@ -73,15 +73,24 @@ describe('TranscriptionSchema', () => {
 
 describe('TranscriptionListResponseSchema', () => {
   it('deve validar resposta de lista paginada', () => {
+    // The list endpoint returns full transcription objects (all fields from the DB),
+    // not just a subset. All nullable fields must be present (as null if not set).
     const response = {
       data: [
         {
           id: 'abc-123',
           status: 'completed',
           audioFilename: 'audio.mp3',
+          audioSizeBytes: 1048576,
           audioDurationSeconds: 90,
+          audioFormat: 'mp3',
+          transcribedText: 'Hello world',
           detectedLanguage: 'pt-BR',
+          languageConfidence: 0.98,
+          processingTimeMs: 1500,
+          errorMessage: null,
           createdAt: '2026-02-21T10:00:00.000Z',
+          completedAt: '2026-02-21T10:00:01.500Z',
         },
       ],
       pagination: {
