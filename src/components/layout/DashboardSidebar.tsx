@@ -6,12 +6,14 @@ import {
   LayoutDashboard,
   User,
   Users,
+  Zap,
 } from 'lucide-react';
 import { LogoutButton } from '@/domains/auth/components/LogoutButton';
 import { DashboardNavButton } from './DashboardNavButton';
 
 const navItems = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard, exactMatch: true },
+  { href: '/dashboard/quickstart', label: 'Quickstart', icon: Zap },
   { href: '/dashboard/api-keys', label: 'API Keys', icon: Key },
   { href: '/dashboard/transcriptions', label: 'Transcrições', icon: FileText },
   { href: '/dashboard/profile', label: 'Perfil', icon: User },
