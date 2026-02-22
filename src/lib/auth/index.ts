@@ -1,1 +1,1 @@
-export { clearClientTokens, getClientAccessToken, setClientAccessToken } from './tokens';
+export { requireAdmin, requireAuth } from './require-auth';
