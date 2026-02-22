@@ -8,7 +8,7 @@ import { TranscriptionTextViewer } from '@/domains/transcriptions/components/Tra
 import { formatDuration, formatFileSize } from '@/domains/transcriptions/helpers';
 import type { Transcription } from '@/domains/transcriptions/schemas';
 import { getTranscription } from '@/domains/transcriptions/service';
-import { formatDateTime } from '@/lib/utils';
+import { formatDateTime } from '@/lib/format-date';
 
 export const dynamic = 'force-dynamic';
 

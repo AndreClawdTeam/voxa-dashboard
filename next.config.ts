@@ -5,8 +5,9 @@ const VOXA_API_URL = process.env.NEXT_PUBLIC_VOXA_API_URL ?? '';
 // Content-Security-Policy diretivas
 const cspDirectives = [
   "default-src 'self'",
-  // 'unsafe-inline' e 'unsafe-eval' são necessários para Next.js (geração de chunks/hydration)
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  // 'unsafe-inline' é necessário para o Next.js (inline scripts de hydration).
+  // 'unsafe-eval' foi removido — não é necessário no Next.js 15+ e representa risco de segurança.
+  "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",

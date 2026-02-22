@@ -1,16 +1,6 @@
 import { type ClassValue, clsx } from 'clsx';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
-}
-
-export function formatDateTime(dateStr: string): string {
-  return format(new Date(dateStr), 'dd/MM/yyyy HH:mm', { locale: ptBR });
-}
-
-export function formatDate(dateStr: string): string {
-  return format(new Date(dateStr), 'dd/MM/yyyy', { locale: ptBR });
 }

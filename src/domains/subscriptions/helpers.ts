@@ -1,4 +1,4 @@
-import { formatDate } from '@/lib/utils';
+import { formatDate } from '@/lib/format-date';
 
 export function getTrialDaysRemaining(trialEndsAt: string | null): number {
   if (!trialEndsAt) return 0;
