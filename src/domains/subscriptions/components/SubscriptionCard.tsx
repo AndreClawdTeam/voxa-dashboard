@@ -6,7 +6,8 @@ import { TIER_LABELS } from '../constants';
 import { getTrialDaysRemaining } from '../helpers';
 import type { Subscription } from '../schemas';
 
-export function SubscriptionCard({ subscription }: { subscription: Subscription }) {
+export function SubscriptionCard({ subscription }: { subscription: Subscription | null }) {
+  if (subscription == null) return null;
   const daysRemaining = getTrialDaysRemaining(subscription.trialEndsAt);
 
   return (

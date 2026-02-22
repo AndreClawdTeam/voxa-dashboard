@@ -25,12 +25,16 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(dest, request.url));
   }
 
-  // /dashboard/* → requer autenticação
+  // /dashboard/* → requer autenticação (admins são redirecionados para /admin)
   if (pathname.startsWith('/dashboard')) {
     if (!accessToken) {
       const url = new URL('/login', request.url);
       url.searchParams.set('redirect', pathname);
       return NextResponse.redirect(url);
+    }
+    // Admins não devem acessar o portal de customers
+    if (userRole === 'admin') {
+      return NextResponse.redirect(new URL('/admin/customers', request.url));
     }
   }
 

@@ -7,12 +7,13 @@ import type { Usage } from '../schemas';
 
 interface Props {
   usage: Usage;
-  subscription: Subscription;
+  subscription: Subscription | null;
 }
 
 export function UsageOverviewCards({ usage, subscription }: Props) {
-  const rateLimit = TIER_RATE_LIMITS[subscription.tier] ?? 20;
-  const tierLabel = TIER_LABELS[subscription.tier] ?? subscription.tier;
+  const rateLimit = subscription != null ? (TIER_RATE_LIMITS[subscription.tier] ?? 20) : 20;
+  const tierLabel =
+    subscription != null ? (TIER_LABELS[subscription.tier] ?? subscription.tier) : 'Trial';
 
   const cards = [
     {

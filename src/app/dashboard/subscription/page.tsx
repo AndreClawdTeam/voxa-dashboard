@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlanComparisonCards } from '@/domains/subscriptions/components/PlanComparisonCards';
 import { TrialCountdown } from '@/domains/subscriptions/components/TrialCountdown';
 import { TIER_LABELS } from '@/domains/subscriptions/constants';
 import { formatPeriod, getSubscriptionStatusLabel } from '@/domains/subscriptions/helpers';
-import { getCurrentSubscription } from '@/domains/subscriptions/service';
+import { getCurrentSubscriptionSafe } from '@/domains/subscriptions/service';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,12 @@ export const metadata: Metadata = {
 };
 
 export default async function SubscriptionPage() {
-  const subscription = await getCurrentSubscription();
+  const subscription = await getCurrentSubscriptionSafe();
+
+  // Sem subscription (ex: admin acessou diretamente) → 404
+  if (subscription == null) {
+    notFound();
+  }
 
   return (
     <div className="space-y-6">
