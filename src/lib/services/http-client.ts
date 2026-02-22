@@ -38,18 +38,28 @@ async function refreshServerToken(): Promise<string> {
     );
   }
 
+  const refreshEndpoint = `${env.NEXT_PUBLIC_VOXA_API_URL}/api/v1/auth/refresh`;
   let res: Response;
   try {
-    res = await fetch(`${env.NEXT_PUBLIC_VOXA_API_URL}/api/v1/auth/refresh`, {
+    res = await fetch(refreshEndpoint, {
       method: 'POST',
       headers: { Cookie: `refreshToken=${refreshToken}` },
       cache: 'no-store',
     });
-  } catch {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[voxaFetch] Network error on token refresh', {
+      endpoint: '/api/v1/auth/refresh',
+      message: msg,
+    });
     throw new VoxaNetworkError('Erro de rede ao renovar sessão.');
   }
 
   if (!res.ok) {
+    console.error('[voxaFetch] Token refresh failed', {
+      endpoint: '/api/v1/auth/refresh',
+      status: res.status,
+    });
     throw new VoxaApiError(
       'Sessão expirada. Faça login novamente.',
       'UNAUTHORIZED',
@@ -61,6 +71,10 @@ async function refreshServerToken(): Promise<string> {
   const body = (await res.json()) as { data?: { accessToken?: string } };
   const newToken = body.data?.accessToken;
   if (!newToken) {
+    console.error('[voxaFetch] Token refresh returned no accessToken', {
+      endpoint: '/api/v1/auth/refresh',
+      status: res.status,
+    });
     throw new VoxaApiError('Token inválido na renovação.', 'UNAUTHORIZED', undefined, 401);
   }
 
@@ -106,6 +120,11 @@ export async function voxaFetch<T>({
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      console.error('[voxaFetch] Network error', {
+        endpoint,
+        method,
+        message: msg,
+      });
       throw new VoxaNetworkError(`Falha na conexão com a API: ${msg}`);
     }
   };
@@ -126,9 +145,21 @@ export async function voxaFetch<T>({
       errorBody = {};
     }
     const b = errorBody as Record<string, unknown>;
+    const errorMessage = typeof b.error === 'string' ? b.error : 'Erro na API';
+    const errorCode = typeof b.code === 'string' ? b.code : 'API_ERROR';
+
+    // Log API errors — status, code, and message only (no tokens or user data)
+    console.error('[voxaFetch] API error response', {
+      endpoint,
+      method,
+      status: response.status,
+      code: errorCode,
+      message: errorMessage,
+    });
+
     throw new VoxaApiError(
-      typeof b.error === 'string' ? b.error : 'Erro na API',
-      typeof b.code === 'string' ? b.code : 'API_ERROR',
+      errorMessage,
+      errorCode,
       Array.isArray(b.details)
         ? (b.details as Array<{ field: string; message: string }>)
         : undefined,
@@ -139,11 +170,22 @@ export async function voxaFetch<T>({
   const json = await response.json();
   const parsed = schema.safeParse(json);
   if (!parsed.success) {
-    // Em desenvolvimento, loga detalhes para depuração. Em produção, evita expor estrutura interna.
+    // In development: log the full Zod error for easy debugging.
+    // In production: log flattened errors (field names + messages, no raw data).
     if (env.NODE_ENV !== 'production') {
-      console.error('[voxaFetch] Resposta inesperada da API:', parsed.error.format());
+      console.error('[voxaFetch] Schema validation failed (dev)', {
+        endpoint,
+        method,
+        errors: parsed.error.format(),
+      });
     } else {
-      console.error('[voxaFetch] Resposta inesperada da API no endpoint:', endpoint);
+      const flat = parsed.error.flatten();
+      console.error('[voxaFetch] Schema validation failed (prod)', {
+        endpoint,
+        method,
+        fieldErrors: flat.fieldErrors,
+        formErrors: flat.formErrors,
+      });
     }
     throw new VoxaApiError('Resposta inesperada da API. Contate o suporte.', 'INVALID_RESPONSE');
   }
