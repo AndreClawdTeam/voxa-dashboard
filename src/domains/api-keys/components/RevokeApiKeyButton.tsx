@@ -1,6 +1,6 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useActionState, useRef } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +15,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { revokeApiKeyAction } from '../actions';
 
+type RevokeState = { success: true } | { success: false; error: string } | null;
+
 interface RevokeApiKeyButtonProps {
   id: string;
   label: string;
@@ -22,13 +24,14 @@ interface RevokeApiKeyButtonProps {
 }
 
 export function RevokeApiKeyButton({ id, label, isRevoked }: RevokeApiKeyButtonProps) {
-  const [isPending, startTransition] = useTransition();
+  const formRef = useRef<HTMLFormElement>(null);
 
-  const handleRevoke = () => {
-    startTransition(async () => {
-      await revokeApiKeyAction(id);
-    });
-  };
+  const [, formAction, isPending] = useActionState<RevokeState, FormData>(
+    async (_prevState: RevokeState, formData: FormData): Promise<RevokeState> => {
+      return await revokeApiKeyAction(formData);
+    },
+    null,
+  );
 
   return (
     <AlertDialog>
@@ -48,13 +51,19 @@ export function RevokeApiKeyButton({ id, label, isRevoked }: RevokeApiKeyButtonP
         <AlertDialogFooter>
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
           <AlertDialogAction
-            onClick={handleRevoke}
+            onClick={() => {
+              formRef.current?.requestSubmit();
+            }}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             Revogar
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
+      {/* Hidden form to carry the id via FormData */}
+      <form ref={formRef} action={formAction} className="hidden">
+        <input type="hidden" name="id" value={id} />
+      </form>
     </AlertDialog>
   );
 }

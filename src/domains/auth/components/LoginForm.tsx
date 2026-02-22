@@ -9,8 +9,8 @@ import { loginAction } from '../actions';
 
 export function LoginForm() {
   const [state, action, isPending] = useActionState(
-    async (prevState: FieldActionResult | null, formData: FormData) => {
-      const result = await loginAction(prevState, formData);
+    async (_prevState: FieldActionResult | null, formData: FormData) => {
+      const result = await loginAction(formData);
 
       // ✅ Efeitos após action AQUI — nunca em useEffect
       if (!result.success && result.error._form) {

@@ -36,11 +36,9 @@ export function ManageSubscriptionForm({ customer, customerId }: Props) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
-  const boundAction = updateSubscriptionAction.bind(null, customerId);
-
   const [state, formAction, isPending] = useActionState<UpdateSubscriptionState, FormData>(
-    async (prevState, formData) => {
-      const result = await boundAction(prevState, formData);
+    async (_prevState: UpdateSubscriptionState, formData: FormData) => {
+      const result = await updateSubscriptionAction(formData);
       if (result?.success) {
         toast.success('Assinatura atualizada com sucesso!');
         setHasChanges(false);
@@ -55,6 +53,9 @@ export function ManageSubscriptionForm({ customer, customerId }: Props) {
   return (
     <>
       <form ref={formRef} action={formAction} className="space-y-4">
+        {/* Hidden field: customerId is passed via FormData instead of .bind() */}
+        <input type="hidden" name="customerId" value={customerId} />
+
         {state && !state.success && (
           <div className="bg-red-50 border border-red-200 rounded p-3 text-red-700 text-sm">
             {state.error}
@@ -75,7 +76,7 @@ export function ManageSubscriptionForm({ customer, customerId }: Props) {
               <SelectContent>
                 {Object.values(SUBSCRIPTION_TIER).map((tier) => (
                   <SelectItem key={tier} value={tier}>
-                    {TIER_LABELS[tier]}
+                    {TIER_LABELS[tier] ?? tier}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -94,7 +95,7 @@ export function ManageSubscriptionForm({ customer, customerId }: Props) {
               <SelectContent>
                 {Object.values(SUBSCRIPTION_STATUS).map((status) => (
                   <SelectItem key={status} value={status}>
-                    {STATUS_LABELS[status]}
+                    {STATUS_LABELS[status] ?? status}
                   </SelectItem>
                 ))}
               </SelectContent>

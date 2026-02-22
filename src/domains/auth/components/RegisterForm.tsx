@@ -9,8 +9,8 @@ import { registerAction } from '../actions';
 
 export function RegisterForm() {
   const [state, action, isPending] = useActionState(
-    async (prevState: FieldActionResult | null, formData: FormData) => {
-      const result = await registerAction(prevState, formData);
+    async (_prevState: FieldActionResult | null, formData: FormData) => {
+      const result = await registerAction(formData);
       // ✅ Efeito após action AQUI — nunca em useEffect
       if (!result.success && result.error._form) {
         toast.error(result.error._form[0]);

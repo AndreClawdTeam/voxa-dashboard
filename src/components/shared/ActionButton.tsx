@@ -4,7 +4,8 @@ import type { ComponentProps } from 'react';
 import { useActionState } from 'react';
 import { Button } from '@/components/ui/button';
 
-type ActionFn = (prevState: unknown, formData: FormData) => Promise<unknown>;
+/** Pure Server Action: takes only FormData */
+type ActionFn = (formData: FormData) => Promise<unknown>;
 
 interface ActionButtonProps extends ComponentProps<typeof Button> {
   /** Server Action a ser chamada no submit */
@@ -21,7 +22,12 @@ export function ActionButton({
   disabled,
   ...buttonProps
 }: ActionButtonProps) {
-  const [, formAction, isPending] = useActionState(action, null);
+  const [, formAction, isPending] = useActionState(
+    async (_prevState: unknown, formData: FormData) => {
+      return await action(formData);
+    },
+    null,
+  );
 
   return (
     <form action={formAction}>

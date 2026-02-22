@@ -16,7 +16,7 @@ interface Props {
 export function ProfileForm({ profile }: Props) {
   const [state, formAction, isPending] = useActionState(
     async (_prevState: UpdateProfileState, formData: FormData): Promise<UpdateProfileState> => {
-      const result = await updateProfileAction(_prevState, formData);
+      const result = await updateProfileAction(formData);
       if (result?.success) {
         toast.success('Perfil atualizado!', {
           description: 'Suas informações foram salvas com sucesso.',
