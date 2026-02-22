@@ -1,5 +1,10 @@
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import { afterEach, vi } from 'vitest';
+
+// Limpa localStorage entre testes para evitar vazamento de estado
+afterEach(() => {
+  localStorage.clear();
+});
 
 // Mock server-only para ambiente de teste (Vitest roda em Node, não Next.js)
 vi.mock('server-only', () => ({}));

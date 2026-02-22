@@ -1,5 +1,3 @@
-import { Suspense } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
 import { getCurrentUser } from '@/domains/auth/service';
 import { SubscriptionCard } from '@/domains/subscriptions/components/SubscriptionCard';
 import { TrialCountdownBanner } from '@/domains/subscriptions/components/TrialCountdownBanner';
@@ -32,21 +30,10 @@ export default async function DashboardPage() {
 
       {showTrialBanner && <TrialCountdownBanner daysRemaining={trialDaysRemaining} />}
 
-      <Suspense fallback={<UsageSkeleton />}>
-        <UsageOverviewCards usage={usage} subscription={subscription} />
-      </Suspense>
+      {/* Dados já resolvidos — Suspense não tem efeito aqui, usar diretamente */}
+      <UsageOverviewCards usage={usage} subscription={subscription} />
 
       <SubscriptionCard subscription={subscription} />
-    </div>
-  );
-}
-
-function UsageSkeleton() {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <Skeleton key={i} className="h-32 rounded-lg" />
-      ))}
     </div>
   );
 }

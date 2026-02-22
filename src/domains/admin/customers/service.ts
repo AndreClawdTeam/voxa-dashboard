@@ -1,10 +1,16 @@
 import 'server-only';
-import { z } from 'zod';
-import type { Subscription } from '@/domains/subscriptions/schemas';
-import { SubscriptionSchema } from '@/domains/subscriptions/schemas';
 import { voxaGet, voxaPatch } from '@/lib/services';
-import type { AdminCustomerDetail, CustomerListResponse, UpdateSubscriptionInput } from './schemas';
-import { AdminCustomerDetailSchema, CustomerListResponseSchema } from './schemas';
+import type {
+  AdminCustomerDetail,
+  AdminSubscription,
+  CustomerListResponse,
+  UpdateSubscriptionInput,
+} from './schemas';
+import {
+  CustomerDetailResponseSchema,
+  CustomerListResponseSchema,
+  UpdateSubscriptionResponseSchema,
+} from './schemas';
 
 export async function listCustomers(
   params: { page?: number; limit?: number; search?: string } = {},
@@ -17,7 +23,6 @@ export async function listCustomers(
 }
 
 export async function getCustomer(id: string): Promise<AdminCustomerDetail> {
-  const CustomerDetailResponseSchema = z.object({ data: AdminCustomerDetailSchema });
   const result = await voxaGet(`/api/v1/admin/customers/${id}`, CustomerDetailResponseSchema);
   return result.data;
 }
@@ -25,11 +30,11 @@ export async function getCustomer(id: string): Promise<AdminCustomerDetail> {
 export async function updateCustomerSubscription(
   customerId: string,
   data: UpdateSubscriptionInput,
-): Promise<Subscription> {
+): Promise<AdminSubscription> {
   const result = await voxaPatch(
     `/api/v1/admin/customers/${customerId}/subscription`,
     data,
-    SubscriptionSchema,
+    UpdateSubscriptionResponseSchema,
   );
   return result.data;
 }

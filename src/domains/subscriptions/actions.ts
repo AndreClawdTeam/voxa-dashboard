@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getCurrentUser } from '@/domains/auth/service';
+import { requireAuth } from '@/lib/auth/require-auth';
 import type { Subscription } from './schemas';
 import { UpgradeSchema } from './schemas';
 import { upgradeSubscription } from './service';
@@ -15,11 +15,8 @@ export async function upgradeSubscriptionAction(
   _prevState: UpgradeState,
   formData: FormData,
 ): Promise<UpgradeState> {
-  // Verificar autenticação
-  const user = await getCurrentUser().catch(() => null);
-  if (!user) {
-    return { success: false, error: 'Não autenticado. Faça login novamente.' };
-  }
+  // requireAuth() redireciona para /login se não autenticado
+  await requireAuth();
 
   const parsed = UpgradeSchema.safeParse({ tier: formData.get('tier') });
   if (!parsed.success) {

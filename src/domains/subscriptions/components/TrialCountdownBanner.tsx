@@ -6,15 +6,26 @@ import { useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 
+const STORAGE_KEY = 'trial-banner-dismissed';
+
 interface Props {
   daysRemaining: number;
 }
 
 export function TrialCountdownBanner({ daysRemaining }: Props) {
-  const [dismissed, setDismissed] = useState(false);
+  // Inicializa a partir do localStorage para persistir o dismiss entre navegações
+  const [dismissed, setDismissed] = useState(
+    () => typeof window !== 'undefined' && localStorage.getItem(STORAGE_KEY) === 'true',
+  );
+
   if (dismissed) return null;
 
   const urgency = daysRemaining <= 1 ? 'destructive' : 'default';
+
+  const handleDismiss = () => {
+    localStorage.setItem(STORAGE_KEY, 'true');
+    setDismissed(true);
+  };
 
   return (
     <Alert variant={urgency} className="flex items-center justify-between">
@@ -29,12 +40,7 @@ export function TrialCountdownBanner({ daysRemaining }: Props) {
           </Link>
         </AlertDescription>
       </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6 shrink-0"
-        onClick={() => setDismissed(true)}
-      >
+      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={handleDismiss}>
         <X size={14} />
       </Button>
     </Alert>

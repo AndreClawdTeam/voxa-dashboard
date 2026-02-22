@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import { voxaGet, voxaPost } from '@/lib/services';
 import type { User } from './schemas';
 import { AuthResponseSchema, MeResponseSchema, RefreshResponseSchema } from './schemas';
@@ -21,7 +22,9 @@ export async function logoutUser(): Promise<void> {
   await voxaPost('/api/v1/auth/logout', {}, RefreshResponseSchema.partial());
 }
 
-export async function getCurrentUser(): Promise<User> {
+// Wrapped with React.cache() to deduplicate calls within the same render tree
+// (e.g., when called from both layout and page in the same request)
+export const getCurrentUser = cache(async (): Promise<User> => {
   const result = await voxaGet('/api/v1/auth/me', MeResponseSchema);
   return result.data;
-}
+});

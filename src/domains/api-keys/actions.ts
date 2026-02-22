@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { getCurrentUser } from '@/domains/auth/service';
+import { requireAuth } from '@/lib/auth/require-auth';
 import { isVoxaApiError } from '@/lib/services';
 import type { ApiKey } from './schemas';
 import { CreateApiKeyInputSchema } from './schemas';
@@ -21,11 +21,8 @@ type RevokeApiKeyResult = { success: true } | { success: false; error: string };
 // ─── Server Actions ───────────────────────────────────────────────────────────
 
 export async function createApiKeyAction(formData: FormData): Promise<CreateApiKeyResult> {
-  // Verificar autenticação
-  const user = await getCurrentUser().catch(() => null);
-  if (!user) {
-    return { success: false, error: 'Não autenticado. Faça login novamente.' };
-  }
+  // requireAuth() redireciona para /login se não autenticado
+  await requireAuth();
 
   const parsed = CreateApiKeyInputSchema.safeParse({
     label: formData.get('label'),
@@ -61,11 +58,8 @@ export async function createApiKeyAction(formData: FormData): Promise<CreateApiK
 }
 
 export async function revokeApiKeyAction(id: string): Promise<RevokeApiKeyResult> {
-  // Verificar autenticação
-  const user = await getCurrentUser().catch(() => null);
-  if (!user) {
-    return { success: false, error: 'Não autenticado. Faça login novamente.' };
-  }
+  // requireAuth() redireciona para /login se não autenticado
+  await requireAuth();
 
   // Validar formato do ID
   const parsed = RevokeApiKeySchema.safeParse({ id });

@@ -1,14 +1,11 @@
 import 'server-only';
-import { redirect } from 'next/navigation';
 import { AdminSidebar } from '@/components/layout/AdminSidebar';
-import { getCurrentUser } from '@/domains/auth/service';
+import { requireAdmin } from '@/lib/auth/require-auth';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const user = await getCurrentUser().catch(() => null);
-
-  if (!user || user.role !== 'admin') {
-    redirect('/dashboard');
-  }
+  // requireAdmin() verifica autenticação + role=admin,
+  // redirecionando para /login ou /dashboard conforme o caso.
+  await requireAdmin();
 
   return (
     <div className="flex h-screen bg-background">

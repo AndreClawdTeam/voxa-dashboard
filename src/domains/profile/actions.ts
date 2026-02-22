@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getCurrentUser } from '@/domains/auth/service';
+import { requireAuth } from '@/lib/auth/require-auth';
 import { isVoxaApiError } from '@/lib/services';
 import type { UserProfile } from './schemas';
 import { UpdateProfileSchema } from './schemas';
@@ -19,15 +19,8 @@ export async function updateProfileAction(
   const name = (formData.get('name') as string) ?? '';
   const email = (formData.get('email') as string) ?? '';
 
-  // Verificar autenticação
-  const user = await getCurrentUser().catch(() => null);
-  if (!user) {
-    return {
-      success: false,
-      error: { _form: ['Não autenticado. Faça login novamente.'] },
-      fields: { name, email },
-    };
-  }
+  // requireAuth() redireciona para /login se não autenticado
+  await requireAuth();
 
   const parsed = UpdateProfileSchema.safeParse({ name, email });
   if (!parsed.success) {

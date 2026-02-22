@@ -52,6 +52,11 @@ export const AdminCustomerDetailSchema = AdminCustomerSchema.extend({
   subscription: AdminSubscriptionSchema.nullable().optional(),
 });
 
+// Response schemas — defined at module level to avoid recreation on every call
+export const CustomerDetailResponseSchema = z.object({ data: AdminCustomerDetailSchema });
+
+export const UpdateSubscriptionResponseSchema = z.object({ data: AdminSubscriptionSchema });
+
 export const UpdateSubscriptionSchema = z
   .object({
     tier: z.enum(tierValues).optional(),
