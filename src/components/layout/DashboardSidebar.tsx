@@ -1,6 +1,7 @@
 'use client';
 
 import { CreditCard, FileText, Key, LayoutDashboard, User } from 'lucide-react';
+import { LogoutButton } from '@/domains/auth/components/LogoutButton';
 import { DashboardNavButton } from './DashboardNavButton';
 
 const navItems = [
@@ -28,6 +29,9 @@ export function DashboardSidebar() {
           />
         ))}
       </nav>
+      <div className="p-2 border-t border-border">
+        <LogoutButton />
+      </div>
     </aside>
   );
 }

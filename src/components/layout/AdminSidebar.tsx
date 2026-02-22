@@ -2,6 +2,7 @@
 
 import { ScrollText, Users } from 'lucide-react';
 import Link from 'next/link';
+import { LogoutButton } from '@/domains/auth/components/LogoutButton';
 import { AdminNavButton } from './AdminNavButton';
 
 const navItems = [
@@ -22,13 +23,14 @@ export function AdminSidebar() {
           <AdminNavButton key={href} href={href} label={label} icon={icon} />
         ))}
       </nav>
-      <div className="p-4 border-t">
+      <div className="p-4 border-t flex flex-col gap-2">
         <Link
           href="/dashboard"
           className="text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           ← Voltar ao dashboard
         </Link>
+        <LogoutButton />
       </div>
     </aside>
   );
