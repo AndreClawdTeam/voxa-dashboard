@@ -25,7 +25,7 @@ const response = await fetch('http://138.197.19.184:3000/api/v1/transcribe', {
 });
 
 const { data } = await response.json();
-console.log(data.text); // transcrição completa`;
+console.log(data.transcribedText); // transcrição completa`;
 
 const PYTHON_EXAMPLE = `import requests
 
@@ -37,7 +37,7 @@ with open('audio.mp3', 'rb') as f:
     )
 
 data = response.json()
-print(data['data']['text'])  # transcrição completa`;
+print(data['data']['transcribedText'])  # transcrição completa`;
 
 export default function QuickstartPage() {
   return (

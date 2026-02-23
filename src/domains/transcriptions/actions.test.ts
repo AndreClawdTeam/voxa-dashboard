@@ -39,12 +39,18 @@ function makeFormData(file: File | null, apiKey: string | null): FormData {
 
 const MOCK_TRANSCRIPTION_DATA = {
   id: 'trans-123',
-  text: 'Olá mundo, esta é uma transcrição.',
-  language: 'pt-BR',
-  duration: 5.2,
-  wordCount: 7,
-  processingTime: 1234,
+  status: 'completed' as const,
+  transcribedText: 'Olá mundo, esta é uma transcrição.',
+  detectedLanguage: 'pt-BR',
+  audioDurationSeconds: 5.2,
+  processingTimeMs: 1234,
+  audioFilename: 'audio.mp3',
+  audioSizeBytes: 1024,
+  audioFormat: 'audio/mpeg',
+  languageConfidence: 0.98,
+  errorMessage: null,
   createdAt: '2026-02-22T12:00:00Z',
+  completedAt: '2026-02-22T12:00:01Z',
 };
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -215,9 +221,9 @@ describe('transcribeAudioAction', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.text).toBe('Olá mundo, esta é uma transcrição.');
+      expect(result.data.transcribedText).toBe('Olá mundo, esta é uma transcrição.');
       expect(result.data.id).toBe('trans-123');
-      expect(result.data.language).toBe('pt-BR');
+      expect(result.data.detectedLanguage).toBe('pt-BR');
     }
   });
 
