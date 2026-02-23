@@ -124,3 +124,51 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ─── Auth pages — Voxa design system ───────────────────────────────────────── */
+
+/* Hero grid background */
+.auth-hero-grid {
+  background-image: linear-gradient(rgba(124, 58, 237, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124, 58, 237, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+/* Glass morphism */
+.auth-glass {
+  background: rgba(14, 16, 24, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.auth-glass-accent {
+  background: rgba(14, 16, 24, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(124, 58, 237, 0.4);
+}
+
+/* Text gradient */
+.auth-text-gradient {
+  background: linear-gradient(135deg, #a78bfa, #c084fc, #e879f9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Auth context — override shadcn vars for dark theme */
+.auth-context {
+  --background: #080a12;
+  --foreground: #f8fafc;
+  --card: #0e1018;
+  --card-foreground: #f8fafc;
+  --input: rgba(255, 255, 255, 0.07);
+  --border: rgba(255, 255, 255, 0.12);
+  --ring: #7c3aed;
+  --primary: #7c3aed;
+  --primary-foreground: #f8fafc;
+  --muted: rgba(255, 255, 255, 0.05);
+  --muted-foreground: #94a3b8;
+  color-scheme: dark;
+}
