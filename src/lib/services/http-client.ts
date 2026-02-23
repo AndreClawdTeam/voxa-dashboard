@@ -176,7 +176,7 @@ export async function voxaFetch<T>({
   console.info('[voxaFetch] Raw API response', {
     endpoint,
     status: response.status,
-    body: json,
+    body: JSON.stringify(json),
   });
 
   const parsed = schema.safeParse(json);
@@ -293,7 +293,7 @@ export async function voxaFetchFormData<T>(
   console.info('[voxaFetchFormData] Raw API response', {
     endpoint,
     status: response.status,
-    body: json,
+    body: JSON.stringify(json),
   });
 
   const parsed = schema.safeParse(json);
