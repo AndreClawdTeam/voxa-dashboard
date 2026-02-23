@@ -168,6 +168,17 @@ export async function voxaFetch<T>({
   }
 
   const json = await response.json();
+
+  // Log the raw response body before any schema validation.
+  // Purpose: when a schema validation error occurs in production (Vercel logs),
+  // this info log appears immediately before the error log, allowing direct
+  // comparison between what arrived and what was expected.
+  console.info('[voxaFetch] Raw API response', {
+    endpoint,
+    status: response.status,
+    body: json,
+  });
+
   const parsed = schema.safeParse(json);
   if (!parsed.success) {
     // In development: log the full Zod error for easy debugging.
@@ -274,6 +285,17 @@ export async function voxaFetchFormData<T>(
   }
 
   const json = await response.json();
+
+  // Log the raw response body before any schema validation.
+  // Purpose: when a schema validation error occurs in production (Vercel logs),
+  // this info log appears immediately before the error log, allowing direct
+  // comparison between what arrived and what was expected.
+  console.info('[voxaFetchFormData] Raw API response', {
+    endpoint,
+    status: response.status,
+    body: json,
+  });
+
   const parsed = schema.safeParse(json);
   if (!parsed.success) {
     if (env.NODE_ENV !== 'production') {

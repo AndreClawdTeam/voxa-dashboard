@@ -196,12 +196,18 @@ describe('NewTranscriptionDialog', () => {
       success: true,
       data: {
         id: 'trans-001',
-        text: 'Transcrição de teste.',
-        language: 'pt',
-        duration: 10,
-        wordCount: 3,
-        processingTime: 2000,
+        status: 'completed',
+        transcribedText: 'Transcrição de teste.',
+        detectedLanguage: 'pt',
+        audioDurationSeconds: 10,
+        processingTimeMs: 2000,
+        audioFilename: 'audio.mp3',
+        audioSizeBytes: 1024,
+        audioFormat: 'audio/mpeg',
+        languageConfidence: 0.95,
+        errorMessage: null,
         createdAt: '2026-02-22T12:00:00Z',
+        completedAt: '2026-02-22T12:00:02Z',
       },
     });
 

@@ -53,15 +53,23 @@ export const TranscriptionListParamsSchema = z.object({
 export type TranscriptionListParams = z.infer<typeof TranscriptionListParamsSchema>;
 
 // ─── Resultado de transcrição (POST /api/v1/transcribe) ───────────────────────
+// The API returns the full database record after processing.
+// Field names match the DB schema (snake_case camelCase Drizzle inference).
 
 export const TranscriptionDataSchema = z.object({
   id: z.string(),
-  text: z.string(),
-  language: z.string(),
-  duration: z.number(),
-  wordCount: z.number(),
-  processingTime: z.number(),
+  status: TranscriptionStatusSchema,
+  transcribedText: z.string().nullable(),
+  detectedLanguage: z.string().nullable(),
+  audioDurationSeconds: z.number().nonnegative().nullable(),
+  processingTimeMs: z.number().int().nonnegative().nullable(),
+  audioFilename: z.string().nullable(),
+  audioSizeBytes: z.number().int().nonnegative().nullable(),
+  audioFormat: z.string().nullable(),
+  languageConfidence: z.number().min(0).max(1).nullable(),
+  errorMessage: z.string().nullable(),
   createdAt: z.string(),
+  completedAt: z.string().nullable(),
 });
 
 export type TranscriptionData = z.infer<typeof TranscriptionDataSchema>;
